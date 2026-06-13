@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureReport Pro v4</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050810;--s1:#090d1a;--s2:#0d1220;--s3:#111828;--s4:#161e30;
+  --b1:#1a2338;--b2:#1f2d48;--b3:#253558;
+  --acc:#00e5b4;--blue:#3d8eff;--gold:#ffd166;--purple:#a78bfa;
+  --red:#ff3d5a;--ora:#ff8800;--yel:#ffcc00;--grn:#00d68f;--inf:#3d8eff;
+  --t1:#e8eeff;--t2:#6b82aa;--t3:#2e3f66;
+  --mono:'Space Mono',monospace;--sans:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t1);font-family:var(--body);font-size:14px;line-height:1.6;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.5}
+.app{max-width:1180px;margin:0 auto;padding:0 24px 80px;position:relative;z-index:1}
+
+/* Header */
+header{padding:26px 0 22px;margin-bottom:22px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--b1)}
+.logo-icon{width:38px;height:38px;background:var(--acc);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 22px rgba(0,229,180,.22)}
+.logo-icon svg{width:19px;height:19px}
+.logo-name{font-family:var(--sans);font-size:19px;font-weight:800;letter-spacing:-.3px}
+.logo-name span{color:var(--acc)}
+.logo-name sup{font-size:10px;color:var(--gold);font-weight:700;vertical-align:super}
+.logo-sub{font-size:9px;color:var(--t3);font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;margin-top:1px}
+.hbadge{font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:3px;letter-spacing:.5px}
+.hbadge.v{color:var(--acc);background:rgba(0,229,180,.08);border:1px solid rgba(0,229,180,.18)}
+.hbadge.s{color:var(--gold);background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.18);margin-left:5px}
+
+/* Tabs */
+.tab-nav{display:flex;gap:2px;margin-bottom:18px;background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:4px}
+.tab-btn{flex:1;padding:8px 12px;background:transparent;border:none;border-radius:7px;font-family:var(--sans);font-size:11px;font-weight:600;color:var(--t3);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px}
+.tab-btn.active{background:var(--s3);color:var(--t1)}
+.tab-btn:hover:not(.active){color:var(--t2)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:1fr 310px;gap:16px;align-items:start}
+
+/* Panels */
+.panel{background:var(--s1);border:1px solid var(--b1);border-radius:12px;overflow:hidden}
+.ph{padding:12px 15px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:7px}
+.ph-dot{width:6px;height:6px;border-radius:50%;background:var(--acc)}
+.ph h2{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--t1);letter-spacing:.3px;text-transform:uppercase}
+.ph .tag{margin-left:auto;font-size:9px;font-family:var(--mono);color:var(--t3);background:var(--s2);border:1px solid var(--b1);border-radius:3px;padding:2px 6px}
+
+textarea{width:100%;background:transparent;border:none;outline:none;color:var(--t1);font-family:var(--mono);font-size:11px;line-height:1.8;padding:15px;resize:none;height:260px;display:block}
+textarea::placeholder{color:var(--t3)}
+
+/* Chips */
+.chips-row{padding:8px 13px;border-top:1px solid var(--b1);display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.chip{font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:3px;border:1px solid var(--b2);color:var(--t3);cursor:pointer;background:transparent;transition:all .15s;user-select:none}
+.chip.on{border-color:var(--acc);color:var(--acc);background:rgba(0,229,180,.07)}
+.sample-lnk{margin-left:auto;font-size:9px;font-family:var(--mono);color:var(--blue);background:none;border:none;cursor:pointer;text-decoration:underline dotted}
+
+/* Sidebar */
+.sidebar{display:flex;flex-direction:column;gap:13px}
+.cg{padding:13px 15px}
+.cg+.cg{border-top:1px solid var(--b1)}
+.cl{font-size:9px;font-family:var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.cl em{color:var(--acc);font-style:normal}
+
+input[type=text],input[type=date]{width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-family:var(--body);font-size:12px;padding:7px 10px;outline:none;transition:border-color .15s;margin-bottom:7px}
+input[type=text]:focus,input[type=date]:focus{border-color:var(--acc)}
+
+/* Toggle switches */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--b1)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-info{flex:1}
+.toggle-label{font-size:11px;font-weight:500;color:var(--t1);display:block;font-family:var(--sans)}
+.toggle-desc{font-size:9px;color:var(--t3);font-family:var(--mono)}
+.toggle{position:relative;width:34px;height:18px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--b2);border-radius:9px;cursor:pointer;transition:.2s;border:1px solid var(--b3)}
+.toggle-slider:before{content:'';position:absolute;height:12px;width:12px;left:2px;bottom:2px;background:var(--t3);border-radius:50%;transition:.2s}
+.toggle input:checked+.toggle-slider{background:rgba(0,229,180,.2);border-color:var(--acc)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(16px);background:var(--acc)}
+
+/* Key row */
+.key-row{display:flex;gap:5px;margin-bottom:5px}
+.key-row input{flex:1;min-width:0;margin-bottom:0}
+.kbtn{width:32px;height:32px;background:var(--s2);border:1px solid var(--b2);border-radius:6px;color:var(--t3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.kbtn:hover{border-color:var(--acc);color:var(--acc)}
+.kbtn.ok{border-color:var(--grn);background:rgba(0,214,143,.1);color:var(--grn)}
+.kbtn.bad{border-color:var(--red);background:rgba(255,61,90,.1);color:var(--red)}
+.key-hint{font-size:9px;font-family:var(--mono);color:var(--t3)}
+
+/* Buttons */
+.btn-main{width:100%;padding:12px;background:var(--acc);color:#001a11;border:none;border-radius:8px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-main:hover{background:#00ccaa;transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,229,180,.2)}
+.btn-main:active{transform:translateY(0)}
+.btn-main:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-dl{width:100%;padding:10px;background:transparent;color:var(--blue);border:1px solid var(--blue);border-radius:8px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:7px}
+.btn-dl:hover{background:rgba(61,142,255,.1)}
+.btn-sec{width:100%;padding:9px;background:transparent;color:var(--t2);border:1px solid var(--b2);border-radius:8px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px}
+.btn-sec:hover{border-color:var(--t2);color:var(--t1)}
+
+/* Status */
+.statusbar{padding:9px 15px;background:var(--s2);border-top:1px solid var(--b1);display:flex;align-items:center;gap:6px}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--t3);flex-shrink:0}
+.sdot.pulse{background:var(--acc);animation:blink 1s infinite}
+.sdot.err{background:var(--red)}.sdot.ok{background:var(--grn)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.stxt{font-size:10px;font-family:var(--mono);color:var(--t3)}
+.err-box{background:rgba(255,61,90,.07);border:1px solid rgba(255,61,90,.2);border-radius:6px;padding:10px 13px;color:#ff9aaa;font-size:11px;margin:8px 13px}
+
+/* Preview */
+.preview{background:var(--s1);border:1px solid var(--b1);border-radius:12px;margin-top:14px;overflow:hidden}
+.prev-hdr{padding:11px 15px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between}
+.prev-hdr h3{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--t1);text-transform:uppercase;letter-spacing:.3px}
+.prev-hdr span{font-size:10px;font-family:var(--mono);color:var(--t3)}
+
+/* Report tabs */
+.report-tabs{display:flex;border-bottom:1px solid var(--b1);background:var(--s2);overflow-x:auto}
+.rtab{padding:9px 14px;font-size:11px;font-family:var(--sans);font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.rtab.active{color:var(--acc);border-bottom-color:var(--acc)}
+.rtab:hover:not(.active){color:var(--t2)}
+.rpane{display:none;padding:18px}.rpane.active{display:block}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:13px}
+.sc{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:8px;text-align:center;transition:transform .2s}
+.sc:hover{transform:translateY(-2px)}
+.sc .n{font-size:19px;font-weight:800;line-height:1;margin-bottom:2px;font-family:var(--mono)}
+.sc .l{font-size:8px;font-family:var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:.4px}
+.sc.C .n{color:var(--red)}.sc.H .n{color:var(--ora)}.sc.M .n{color:var(--yel)}.sc.L .n{color:var(--grn)}.sc.I .n{color:var(--inf)}
+
+/* Risk bar */
+.risk-row{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.rbw{flex:1;height:5px;background:var(--b2);border-radius:3px;overflow:hidden}
+.rb{height:100%;border-radius:3px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.rlbl{font-size:10px;font-family:var(--mono);color:var(--t2);flex-shrink:0;font-weight:700}
+
+/* Section cards */
+.section-card{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:13px 15px;margin-bottom:11px}
+.section-card h4{font-family:var(--sans);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:7px;display:flex;align-items:center;gap:5px}
+.section-card h4 .accent-bar{width:3px;height:11px;border-radius:2px;display:inline-block;flex-shrink:0}
+.section-card p{font-size:12px;color:var(--t1);line-height:1.75}
+
+/* Narrative */
+.narrative-card{background:var(--s2);border:1px solid var(--b1);border-left:3px solid var(--gold);border-radius:8px;padding:13px 15px;margin-bottom:11px}
+.narrative-card h4{font-size:10px;font-family:var(--sans);font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gold);margin-bottom:7px}
+.narrative-card p{font-size:12px;color:var(--t1);line-height:1.8;margin-bottom:7px}
+.narrative-card p:last-child{margin-bottom:0}
+
+/* Strategic recs */
+.strat-grid{display:flex;flex-direction:column;gap:7px;margin-bottom:11px}
+.strat-item{background:var(--s3);border:1px solid var(--b1);border-radius:8px;padding:10px 13px}
+.strat-item-hdr{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.strat-cat{font-size:10px;font-family:var(--sans);font-weight:700;color:var(--t1)}
+.strat-count{font-size:9px;font-family:var(--mono);color:var(--t3);background:var(--s2);border:1px solid var(--b1);padding:1px 6px;border-radius:3px}
+.strat-item p{font-size:11px;color:var(--t2);line-height:1.6}
+.strat-prio{font-size:9px;font-family:var(--mono);padding:2px 6px;border-radius:3px;margin-left:auto;font-weight:700}
+.strat-prio.immediate{background:rgba(255,61,90,.15);color:var(--red);border:1px solid rgba(255,61,90,.25)}
+.strat-prio.shortterm{background:rgba(255,136,0,.15);color:var(--ora);border:1px solid rgba(255,136,0,.25)}
+.strat-prio.longterm{background:rgba(0,214,143,.15);color:var(--grn);border:1px solid rgba(0,214,143,.25)}
+
+/* SW grid */
+.sw-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px}
+.sw-card{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:12px 13px}
+.sw-card.strength{border-left:3px solid var(--grn)}
+.sw-card.weakness{border-left:3px solid var(--red)}
+.sw-card h4{font-size:10px;font-family:var(--sans);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px}
+.sw-card.strength h4{color:var(--grn)}.sw-card.weakness h4{color:var(--red)}
+.sw-card p{font-size:11px;color:var(--t2);line-height:1.7}
+
+/* Audience badges */
+.aud-row{display:flex;gap:5px;margin-bottom:13px;flex-wrap:wrap}
+.aud{font-size:9px;font-family:var(--mono);padding:3px 9px;border-radius:3px;border:1px solid var(--b2)}
+.aud.exec{border-color:rgba(255,209,102,.3);color:var(--gold);background:rgba(255,209,102,.06)}
+.aud.ciso{border-color:rgba(61,142,255,.3);color:var(--blue);background:rgba(61,142,255,.06)}
+.aud.tech{border-color:rgba(0,229,180,.3);color:var(--acc);background:rgba(0,229,180,.06)}
+
+/* ── FINDINGS ── */
+.vlist{display:flex;flex-direction:column;gap:7px}
+.vc{border:1px solid var(--b1);border-radius:9px;overflow:hidden;transition:border-color .2s}
+.vc:hover{border-color:var(--b3)}
+.vch{padding:10px 13px;display:flex;align-items:center;gap:7px;cursor:pointer}
+.sb{font-size:9px;font-family:var(--mono);font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
+.sb.CRITICAL{background:rgba(255,61,90,.15);color:var(--red);border:1px solid rgba(255,61,90,.25)}
+.sb.HIGH{background:rgba(255,136,0,.15);color:var(--ora);border:1px solid rgba(255,136,0,.25)}
+.sb.MEDIUM{background:rgba(255,204,0,.15);color:var(--yel);border:1px solid rgba(255,204,0,.25)}
+.sb.LOW{background:rgba(0,214,143,.15);color:var(--grn);border:1px solid rgba(0,214,143,.25)}
+.sb.INFO{background:rgba(61,142,255,.15);color:var(--inf);border:1px solid rgba(61,142,255,.25)}
+.vt{font-size:12px;font-weight:600;color:var(--t1);flex:1;font-family:var(--sans)}
+.vcvss{font-size:9px;font-family:var(--mono);color:var(--t3);flex-shrink:0}
+.vtoggle{font-size:10px;color:var(--t3);flex-shrink:0;transition:transform .2s}
+.vc.open .vtoggle{transform:rotate(180deg)}
+.vcb{padding:13px;border-top:1px solid var(--b1);display:none}
+.vc.open .vcb{display:block}
+
+.vf{margin-bottom:9px}.vf:last-child{margin-bottom:0}
+.vfl{font-size:8px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:3px}
+.vfv{font-size:11px;color:var(--t1);line-height:1.65}
+.vfv.code{font-family:var(--mono);font-size:10px;background:var(--s3);padding:6px 9px;border-radius:4px;border:1px solid var(--b1);color:var(--t2)}
+.vfv.rem{color:var(--grn)}
+.vfv.impact{color:var(--gold)}
+
+/* Compliance tags */
+.compliance-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.ctag{font-size:9px;font-family:var(--mono);padding:2px 6px;border-radius:3px;border:1px solid var(--b2);color:var(--t2)}
+.ctag.owasp{border-color:rgba(167,139,250,.3);color:var(--purple);background:rgba(167,139,250,.06)}
+.ctag.nist{border-color:rgba(61,142,255,.3);color:var(--blue);background:rgba(61,142,255,.06)}
+.ctag.pci{border-color:rgba(255,209,102,.3);color:var(--gold);background:rgba(255,209,102,.06)}
+.ctag.gdpr{border-color:rgba(255,136,0,.3);color:var(--ora);background:rgba(255,136,0,.06)}
+.ctag.iso{border-color:rgba(0,214,143,.3);color:var(--grn);background:rgba(0,214,143,.06)}
+
+/* Retest status */
+.retest-row{display:flex;align-items:center;gap:7px;margin-top:8px;padding-top:8px;border-top:1px solid var(--b1)}
+.retest-label{font-size:9px;font-family:var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0}
+.retest-select{background:var(--s2);border:1px solid var(--b2);border-radius:5px;color:var(--t1);font-family:var(--mono);font-size:10px;padding:3px 7px;outline:none;cursor:pointer;transition:border-color .15s;flex:1}
+.retest-select:focus{border-color:var(--acc)}
+.retest-badge{font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:3px;font-weight:700;flex-shrink:0}
+.rs-open{background:rgba(255,61,90,.15);color:var(--red);border:1px solid rgba(255,61,90,.25)}
+.rs-progress{background:rgba(255,136,0,.15);color:var(--ora);border:1px solid rgba(255,136,0,.25)}
+.rs-resolved{background:rgba(0,214,143,.15);color:var(--grn);border:1px solid rgba(0,214,143,.25)}
+.rs-accepted{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
+
+/* Severity override */
+.override-row{display:flex;align-items:center;gap:7px;margin-top:7px;padding-top:7px;border-top:1px solid var(--b1)}
+.override-label{font-size:9px;font-family:var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0}
+.override-select{background:var(--s2);border:1px solid var(--b2);border-radius:5px;color:var(--t1);font-family:var(--mono);font-size:10px;padding:3px 7px;outline:none;cursor:pointer;flex:1}
+.override-note{width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:5px;color:var(--t2);font-family:var(--mono);font-size:10px;padding:5px 8px;outline:none;margin-top:5px;resize:none;height:40px}
+.override-note::placeholder{color:var(--t3)}
+
+/* Risk matrix */
+.risk-matrix{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:14px;margin-bottom:11px}
+.risk-matrix h4{font-family:var(--sans);font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.matrix-grid{display:grid;grid-template-columns:30px repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:4px;height:180px}
+.matrix-cell{border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:var(--mono);color:rgba(255,255,255,.5);position:relative;overflow:hidden}
+.matrix-axis-label{font-size:8px;font-family:var(--mono);color:var(--t3);display:flex;align-items:center;justify-content:center;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg)}
+.matrix-dot{position:absolute;width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.8);cursor:pointer;transition:transform .2s;z-index:1}
+.matrix-dot:hover{transform:scale(1.4)}
+.matrix-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.matrix-legend-item{display:flex;align-items:center;gap:4px;font-size:9px;font-family:var(--mono);color:var(--t2)}
+.matrix-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Historical */
+.history-panel{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:14px;margin-bottom:11px}
+.history-panel h4{font-family:var(--sans);font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.hist-chart{display:flex;align-items:flex-end;gap:8px;height:100px;border-bottom:1px solid var(--b1);padding-bottom:4px;margin-bottom:6px}
+.hist-bar-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.hist-bars{display:flex;align-items:flex-end;gap:2px;height:90px;width:100%}
+.hist-bar{flex:1;border-radius:3px 3px 0 0;min-height:3px;transition:height .5s}
+.hist-date{font-size:8px;font-family:var(--mono);color:var(--t3);text-align:center;margin-top:4px}
+.hist-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.hist-leg{display:flex;align-items:center;gap:4px;font-size:8px;font-family:var(--mono);color:var(--t2)}
+.hist-leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* Clients */
+.client-list{display:flex;flex-direction:column;gap:7px;padding:13px}
+.client-empty{text-align:center;padding:34px 20px;color:var(--t3);font-size:11px;font-family:var(--mono)}
+.client-empty span{font-size:26px;display:block;margin-bottom:7px;opacity:.35}
+.cc{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:9px;transition:all .2s}
+.cc:hover{border-color:var(--b3);transform:translateX(2px)}
+.cc-info{flex:1;min-width:0}
+.cc-name{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:2px;font-family:var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-meta{font-size:9px;font-family:var(--mono);color:var(--t3)}
+.cc-dots{display:flex;gap:3px;flex-shrink:0}
+.cc-dot{width:7px;height:7px;border-radius:50%}
+.cc-acts{display:flex;gap:4px;flex-shrink:0}
+.cc-btn{background:var(--s3);border:1px solid var(--b2);border-radius:4px;padding:3px 7px;font-size:9px;font-family:var(--mono);color:var(--t2);cursor:pointer;transition:all .15s}
+.cc-btn:hover{border-color:var(--blue);color:var(--blue)}
+.cc-btn.del:hover{border-color:var(--red);color:var(--red)}
+
+/* Settings */
+.logo-upload{border:1px dashed var(--b3);border-radius:8px;padding:13px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:7px;background:var(--s2)}
+.logo-upload:hover{border-color:var(--acc)}
+.logo-upload p{font-size:10px;color:var(--t3);font-family:var(--mono)}
+#logoPreview{max-height:44px;max-width:100%;object-fit:contain;display:none;margin:0 auto}
+#logoInput{display:none}
+
+/* Spinner */
+.spinner{width:12px;height:12px;border:2px solid rgba(0,229,180,.2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Setup banner */
+.setup-banner{background:var(--s1);border:1px solid var(--b2);border-left:3px solid var(--blue);border-radius:10px;padding:12px 15px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start}
+.setup-banner.hidden{display:none}
+.sb-icon{color:var(--blue);font-size:15px;flex-shrink:0;margin-top:1px}
+.sb-text h3{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:3px;font-family:var(--sans)}
+.sb-text p{font-size:11px;color:var(--t2);line-height:1.55}
+.sb-text a{color:var(--blue);text-decoration:none}
+.sb-text a:hover{text-decoration:underline}
+
+@media(max-width:820px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}.sw-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div class="logo-icon">
+    <svg viewBox="0 0 20 20" fill="none">
+      <path d="M10 1.5L2.5 5.5v4.8c0 4 3 7.4 7.5 8.2 4.5-.8 7.5-4.2 7.5-8.2V5.5L10 1.5z" stroke="#001a11" stroke-width="1.5"/>
+      <path d="M7 10l2 2 4-4" stroke="#001a11" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div>
+    <div class="logo-name">Secure<span>Report</span> <sup>PRO</sup></div>
+    <div class="logo-sub">Professional Pentest Report Generator</div>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center">
+    <span class="hbadge v">v4.0</span>
+    <span class="hbadge s">⚡ SAAS</span>
+  </div>
+</header>
+
+
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('analyze',this)">🔍 <span>Analyze</span></button>
+  <button class="tab-btn" onclick="switchTab('clients',this)">📁 <span>Clients</span></button>
+  <button class="tab-btn" onclick="switchTab('settings',this)">⚙️ <span>Settings</span></button>
+</div>
+
+<!-- ══ ANALYZE TAB ══ -->
+<div class="tab-pane active" id="tab-analyze">
+<div class="layout">
+  <div>
+    <div class="panel">
+      <div class="ph"><div class="ph-dot"></div><h2>Scan Output</h2><div class="tag">RAW INPUT</div></div>
+      <textarea id="scanInput" placeholder="Paste raw scan output here...
+
+Supported: Nmap • Metasploit • Burp Suite • Nessus • OpenVAS • Nikto • Shodan • Manual"></textarea>
+      <div class="chips-row">
+        <span style="font-size:9px;color:var(--t3);font-family:var(--mono);margin-right:2px">SOURCE:</span>
+        <button class="chip on" onclick="setChip(this,'nmap')">nmap</button>
+        <button class="chip" onclick="setChip(this,'metasploit')">metasploit</button>
+        <button class="chip" onclick="setChip(this,'burp')">burp suite</button>
+        <button class="chip" onclick="setChip(this,'nessus')">nessus</button>
+        <button class="chip" onclick="setChip(this,'openvas')">openvas</button>
+        <button class="chip" onclick="setChip(this,'nikto')">nikto</button>
+        <button class="chip" onclick="setChip(this,'shodan')">shodan</button>
+        <button class="chip" onclick="setChip(this,'manual')">manual</button>
+        <button class="sample-lnk" onclick="loadSample()">sample →</button>
+      </div>
+    </div>
+
+    <div id="previewWrap" style="display:none">
+      <div class="preview">
+        <div class="prev-hdr">
+          <h3>📋 Report Preview</h3>
+          <span id="findCount">—</span>
+        </div>
+        <div class="report-tabs">
+          <div class="rtab active" onclick="switchRTab('executive',this)">👔 Executive</div>
+          <div class="rtab" onclick="switchRTab('ciso',this)">🛡️ CISO/CTO</div>
+          <div class="rtab" onclick="switchRTab('technical',this)">⚙️ Technical</div>
+          <div class="rtab" onclick="switchRTab('narrative',this)">📖 Narrative</div>
+          <div class="rtab" id="rtab-matrix" style="display:none" onclick="switchRTab('matrix',this)">📊 Risk Matrix</div>
+          <div class="rtab" id="rtab-history" style="display:none" onclick="switchRTab('history',this)">📈 History</div>
+        </div>
+
+        <!-- Executive -->
+        <div class="rpane active" id="rpane-executive">
+          <div class="aud-row"><span class="aud exec">👔 CEO / Board</span><span class="aud exec">Plain English</span><span class="aud exec">No Jargon</span></div>
+          <div class="stats" id="exec-stats"></div>
+          <div class="risk-row">
+            <span class="rlbl" style="color:var(--t2)">Overall Risk</span>
+            <div class="rbw"><div class="rb" id="riskBar"></div></div>
+            <span class="rlbl" id="riskLabel"></span>
+          </div>
+          <div class="section-card"><h4><span class="accent-bar" style="background:var(--gold)"></span>Introduction</h4><p id="exec-intro"></p></div>
+          <div class="section-card"><h4><span class="accent-bar" style="background:var(--blue)"></span>Engagement Highlights</h4><p id="exec-highlights"></p></div>
+          <div class="section-card"><h4><span class="accent-bar" style="background:var(--red)"></span>Key Findings</h4><p id="exec-keyfindings"></p></div>
+          <div class="section-card"><h4><span class="accent-bar" style="background:var(--ora)"></span>Business Implications</h4><p id="exec-bizimpact"></p></div>
+        </div>
+
+        <!-- CISO -->
+        <div class="rpane" id="rpane-ciso">
+          <div class="aud-row"><span class="aud ciso">🛡️ CISO / CIO / CTO</span><span class="aud ciso">Strategic View</span></div>
+          <div class="sw-grid" id="sw-grid"></div>
+          <div class="section-card">
+            <h4><span class="accent-bar" style="background:var(--blue)"></span>Strategic Recommendations</h4>
+            <p style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:9px">ROOT CAUSE CATEGORIES REQUIRING POLICY ACTION:</p>
+            <div class="strat-grid" id="strat-grid"></div>
+          </div>
+          <div class="section-card"><h4><span class="accent-bar" style="background:var(--acc)"></span>Risk Assessment</h4><p id="ciso-risk"></p></div>
+        </div>
+
+        <!-- Technical -->
+        <div class="rpane" id="rpane-technical">
+          <div class="aud-row"><span class="aud tech">⚙️ Security Team</span><span class="aud tech">Developers</span><span class="aud tech">Operations</span></div>
+          <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+            <span>Click any finding to expand details</span>
+            <span style="margin-left:auto;color:var(--acc)">Retest status & severity override enabled</span>
+          </div>
+          <div class="vlist" id="vlist"></div>
+        </div>
+
+        <!-- Narrative -->
+        <div class="rpane" id="rpane-narrative">
+          <div class="aud-row"><span class="aud exec">📖 Assessment Story</span><span class="aud ciso">All Audiences</span></div>
+          <div class="narrative-card"><h4>🔍 The Story of This Assessment</h4><div id="narrative-text"></div></div>
+          <div class="section-card"><h4><span class="accent-bar" style="background:var(--grn)"></span>Scope & Methodology</h4><p id="scope-text"></p></div>
+        </div>
+
+        <!-- Risk Matrix (optional) -->
+        <div class="rpane" id="rpane-matrix">
+          <div class="aud-row"><span class="aud ciso">📊 Risk Matrix</span><span class="aud ciso">Likelihood vs Impact</span></div>
+          <div class="risk-matrix">
+            <h4>Vulnerability Risk Matrix — Likelihood vs Business Impact</h4>
+            <canvas id="matrixCanvas" width="500" height="220" style="width:100%;border-radius:6px"></canvas>
+            <div class="matrix-legend" id="matrixLegend"></div>
+          </div>
+        </div>
+
+        <!-- History (optional) -->
+        <div class="rpane" id="rpane-history">
+          <div class="aud-row"><span class="aud ciso">📈 Historical Comparison</span></div>
+          <div class="history-panel">
+            <h4>Risk Score & Findings Over Time — <span id="histClientName" style="color:var(--acc)"></span></h4>
+            <div class="hist-chart" id="histChart"></div>
+            <div class="hist-legend">
+              <div class="hist-leg"><div class="hist-leg-dot" style="background:var(--red)"></div>Critical</div>
+              <div class="hist-leg"><div class="hist-leg-dot" style="background:var(--ora)"></div>High</div>
+              <div class="hist-leg"><div class="hist-leg-dot" style="background:var(--yel)"></div>Medium</div>
+              <div class="hist-leg"><div class="hist-leg-dot" style="background:var(--grn)"></div>Low</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="panel">
+      <div class="ph"><div class="ph-dot" style="background:var(--blue)"></div><h2>Configuration</h2></div>
+
+      <div class="cg">
+        <div class="cl"><em>01</em> Client Details</div>
+        <input type="text" id="clientName" placeholder="Client / Organization Name"/>
+        <input type="text" id="assessType" placeholder="Assessment Type"/>
+        <input type="date" id="rptDate"/>
+        <input type="text" id="scope" placeholder="Scope (e.g. 192.168.1.0/24)"/>
+      </div>
+
+      <div class="cg">
+        <div class="cl"><em>02</em> Assessor</div>
+        <input type="text" id="assessorName" placeholder="Lead Assessor Name"/>
+        <input type="text" id="firmName" placeholder="Company / Firm"/>
+      </div>
+
+      <!-- Optional features toggle -->
+      <div class="cg">
+        <div class="cl"><em>03</em> Optional Features</div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Risk Matrix Chart</span>
+            <span class="toggle-desc">Likelihood vs Impact plot</span>
+          </div>
+          <label class="toggle"><input type="checkbox" id="opt-matrix" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Historical Comparison</span>
+            <span class="toggle-desc">Shows when 2+ reports saved</span>
+          </div>
+          <label class="toggle"><input type="checkbox" id="opt-history" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Compliance Mapping</span>
+            <span class="toggle-desc">OWASP · NIST · PCI-DSS · GDPR</span>
+          </div>
+          <label class="toggle"><input type="checkbox" id="opt-compliance" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Retest Status Tracker</span>
+            <span class="toggle-desc">Track remediation progress</span>
+          </div>
+          <label class="toggle"><input type="checkbox" id="opt-retest" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Severity Override</span>
+            <span class="toggle-desc">Adjust AI severity per finding</span>
+          </div>
+          <label class="toggle"><input type="checkbox" id="opt-override" checked><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+
+      <div class="cg">
+        <button class="btn-main" id="genBtn" onclick="generate()">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.4 4H12l-3.4 2.5 1.3 4L6.5 9l-3.4 2.5 1.3-4L1 5h4.1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          Analyze &amp; Generate Report
+        </button>
+        <div id="dlArea" style="display:none">
+          <button class="btn-dl" onclick="downloadPDF()">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3.5 5.5L6 8l2.5-2.5M1 10h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Download Full PDF Report
+          </button>
+          <button class="btn-sec" onclick="saveToClients()">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2h6l2 2v6H2V2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><rect x="3.5" y="7" width="5" height="3" rx=".4" stroke="currentColor" stroke-width="1"/><path d="M3.5 2v3h5V2" stroke="currentColor" stroke-width="1"/></svg>
+            Save to Client Reports
+          </button>
+        </div>
+      </div>
+
+      <div class="statusbar">
+        <div class="sdot" id="sdot"></div>
+        <span class="stxt" id="stxt">Ready — paste scan output and generate</span>
+      </div>
+      <div id="errArea"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ CLIENTS TAB ══ -->
+<div class="tab-pane" id="tab-clients">
+  <div class="panel">
+    <div class="ph"><div class="ph-dot" style="background:var(--gold)"></div><h2>Saved Client Reports</h2><div class="tag" id="clientCount">0 REPORTS</div></div>
+    <div id="clientList"></div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS TAB ══ -->
+<div class="tab-pane" id="tab-settings">
+  <div class="layout">
+    <div class="panel">
+      <div class="ph"><div class="ph-dot" style="background:var(--gold)"></div><h2>Branding</h2></div>
+      <div class="cg">
+        <div class="cl"><em>LOGO</em> Company Logo</div>
+        <div class="logo-upload" onclick="document.getElementById('logoInput').click()">
+          <img id="logoPreview" src="" alt=""/>
+          <div id="logoPH"><div style="font-size:22px;margin-bottom:5px">🖼️</div><p>Click to upload logo<br><span style="font-size:9px;opacity:.5">PNG/JPG — PDF cover page</span></p></div>
+        </div>
+        <input type="file" id="logoInput" accept="image/*" onchange="handleLogo(event)"/>
+      </div>
+      <div class="cg">
+        <div class="cl"><em>BRAND</em> Identity</div>
+        <div style="display:flex;gap:9px;align-items:center;margin-bottom:8px">
+          <label style="font-size:11px;color:var(--t2);flex:1;font-family:var(--mono)">Accent Color</label>
+          <input type="color" id="brandColor" value="#00e5b4" style="width:36px;height:28px;border:1px solid var(--b2);border-radius:5px;background:var(--s2);cursor:pointer;padding:2px"/>
+        </div>
+        <input type="text" id="tagline" placeholder="Company tagline"/>
+        <button class="btn-main" onclick="saveBranding()">Save Branding</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-dot" style="background:var(--blue)"></div><h2>AI Model</h2></div>
+      <div class="cg">
+        <div style="margin-top:4px">
+          <div class="cl"><em>MODEL</em> AI Model</div>
+          <select id="modelSelect" style="width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-family:var(--mono);font-size:10px;padding:7px 9px;outline:none">
+            <option value="openrouter/free">openrouter/free (Auto · Free)</option>
+            <option value="mistralai/mistral-7b-instruct:free">mistral-7b (Free)</option>
+            <option value="google/gemma-2-9b-it:free">gemma-2-9b (Free)</option>
+            <option value="microsoft/phi-3-mini-128k-instruct:free">phi-3-mini (Free)</option>
+          </select>
+      </div>
+      <div class="cg">
+        <div class="cl"><em>SAAS</em> Pricing Tiers</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:9px 11px;display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:11px;font-weight:600;color:var(--t1);font-family:var(--sans)">Starter</div><div style="font-size:9px;color:var(--t3);font-family:var(--mono)">10 reports/mo · Basic PDF</div></div>
+            <div style="font-size:13px;font-weight:700;color:var(--grn);font-family:var(--sans)">$29<span style="font-size:9px;font-weight:400">/mo</span></div>
+          </div>
+          <div style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:9px 11px;display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:11px;font-weight:600;color:var(--t1);font-family:var(--sans)">Pro</div><div style="font-size:9px;color:var(--t3);font-family:var(--mono)">Unlimited + compliance + matrix</div></div>
+            <div style="font-size:13px;font-weight:700;color:var(--gold);font-family:var(--sans)">$79<span style="font-size:9px;font-weight:400">/mo</span></div>
+          </div>
+          <div style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:9px 11px;display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:11px;font-weight:600;color:var(--t1);font-family:var(--sans)">Agency</div><div style="font-size:9px;color:var(--t3);font-family:var(--mono)">Team + white-label + history</div></div>
+            <div style="font-size:13px;font-weight:700;color:var(--blue);font-family:var(--sans)">$199<span style="font-size:9px;font-weight:400">/mo</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ── State ──
+let tool='nmap', reportData=null, logoDataUrl=null, retestStatus={}, overrides={};
+
+const COMPLIANCE_MAP = {
+  'SQL Injection':       {owasp:'A03:2021',nist:'SI-10',pci:'6.3.1',gdpr:'Art.32'},
+  'XSS':                {owasp:'A03:2021',nist:'SI-10',pci:'6.3.1'},
+  'Cross-Site Scripting':{owasp:'A03:2021',nist:'SI-10',pci:'6.3.1'},
+  'IDOR':               {owasp:'A01:2021',nist:'AC-3',pci:'7.1'},
+  'Insecure Direct Object':{owasp:'A01:2021',nist:'AC-3',pci:'7.1'},
+  'CSRF':               {owasp:'A01:2021',nist:'SC-8',pci:'6.3.1'},
+  'Sensitive Data':     {owasp:'A02:2021',nist:'SC-28',pci:'3.4',gdpr:'Art.32'},
+  'Credit Card':        {owasp:'A02:2021',nist:'SC-28',pci:'3.4',gdpr:'Art.32'},
+  'Authentication':     {owasp:'A07:2021',nist:'IA-5',pci:'8.3'},
+  'Misconfiguration':   {owasp:'A05:2021',nist:'CM-6',pci:'2.2'},
+  'Directory':          {owasp:'A05:2021',nist:'CM-6',pci:'2.2'},
+  'Outdated':           {owasp:'A06:2021',nist:'SI-2',pci:'6.3.3'},
+  'Default':            {owasp:'A05:2021',nist:'CM-6',pci:'2.2'},
+  'Backdoor':           {owasp:'A08:2021',nist:'SI-3',pci:'5.1'},
+  'EternalBlue':        {owasp:'A06:2021',nist:'SI-2',pci:'6.3.3'},
+  'Telnet':             {owasp:'A02:2021',nist:'SC-8',pci:'2.2.7'},
+  'FTP':                {owasp:'A02:2021',nist:'SC-8',pci:'2.2.7'},
+  'VNC':                {owasp:'A07:2021',nist:'IA-5',pci:'8.3'},
+  'Headers':            {owasp:'A05:2021',nist:'SC-8',pci:'6.3.1'},
+  'Error':              {owasp:'A05:2021',nist:'SI-11',pci:'6.3'},
+};
+
+function getCompliance(title){
+  for(const[k,v] of Object.entries(COMPLIANCE_MAP)){
+    if(title.toLowerCase().includes(k.toLowerCase())) return v;
+  }
+  return null;
+}
+
+function complianceTags(title){
+  const c=getCompliance(title);
+  if(!c) return '';
+  let h='<div class="compliance-tags">';
+  if(c.owasp) h+=`<span class="ctag owasp">OWASP ${c.owasp}</span>`;
+  if(c.nist)  h+=`<span class="ctag nist">NIST ${c.nist}</span>`;
+  if(c.pci)   h+=`<span class="ctag pci">PCI-DSS ${c.pci}</span>`;
+  if(c.gdpr)  h+=`<span class="ctag gdpr">GDPR ${c.gdpr}</span>`;
+  h+='</div>';
+  return h;
+}
+
+// ── Init ──
+document.getElementById('rptDate').value=new Date().toISOString().split('T')[0];
+setStatus('Ready',false,'ok');
+const sl=localStorage.getItem('sr_logo');
+if(sl){logoDataUrl=sl;showLogoPreview(sl);}
+const sb2=localStorage.getItem('sr_brand');
+if(sb2){try{const b=JSON.parse(sb2);if(b.color)document.getElementById('brandColor').value=b.color;if(b.tagline)document.getElementById('tagline').value=b.tagline;}catch(e){}}
+const sm=localStorage.getItem('sr_model');
+if(sm)document.getElementById('modelSelect').value=sm;
+const opts=JSON.parse(localStorage.getItem('sr_opts')||'{}');
+['matrix','history','compliance','retest','override'].forEach(o=>{
+  const el=document.getElementById('opt-'+o);
+  if(el && opts[o]!==undefined) el.checked=opts[o];
+});
+renderClients();
+
+// ── Helpers ──
+function switchTab(n,btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+n).classList.add('active');
+  btn.classList.add('active');
+  if(n==='clients')renderClients();
+}
+function switchRTab(n,el){
+  document.querySelectorAll('.rpane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('rpane-'+n).classList.add('active');
+  el.classList.add('active');
+}
+function setChip(el,t){document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');tool=t;}
+function setStatus(m,p,type=''){
+  document.getElementById('stxt').textContent=m;
+  const d=document.getElementById('sdot');
+  d.className='sdot'+(p?' pulse':'')+(type==='err'?' err':type==='ok'?' ok':'');
+}
+function showErr(m){document.getElementById('errArea').innerHTML=`<div class="err-box">${m}</div>`;}
+function clearErr(){document.getElementById('errArea').innerHTML='';}
+
+// ── Logo / Brand ──
+function handleLogo(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{logoDataUrl=ev.target.result;localStorage.setItem('sr_logo',logoDataUrl);showLogoPreview(logoDataUrl);};r.readAsDataURL(f);}
+function showLogoPreview(src){document.getElementById('logoPreview').src=src;document.getElementById('logoPreview').style.display='block';document.getElementById('logoPH').style.display='none';}
+function saveBranding(){
+  const b={color:document.getElementById('brandColor').value,tagline:document.getElementById('tagline').value};
+  localStorage.setItem('sr_brand',JSON.stringify(b));
+  localStorage.setItem('sr_model',document.getElementById('modelSelect').value);
+  alert('Branding & model saved!');
+}
+
+// ── Save options ──
+function saveOpts(){
+  const opts={};
+  ['matrix','history','compliance','retest','override'].forEach(o=>{
+    const el=document.getElementById('opt-'+o);
+    if(el) opts[o]=el.checked;
+  });
+  localStorage.setItem('sr_opts',JSON.stringify(opts));
+}
+['matrix','history','compliance','retest','override'].forEach(o=>{
+  document.getElementById('opt-'+o)?.addEventListener('change',saveOpts);
+});
+
+function opt(name){return document.getElementById('opt-'+name)?.checked ?? true;}
+
+function loadSample(){
+  document.getElementById('scanInput').value=`Starting Nmap 7.94 at 2024-03-12
+Nmap scan report for 10.0.0.105
+PORT      STATE SERVICE       VERSION
+21/tcp    open  ftp           ProFTPD 1.3.3c - Anonymous login allowed
+23/tcp    open  telnet        Linux telnetd
+80/tcp    open  http          Apache httpd 2.2.14 - TRACE method enabled
+443/tcp   open  ssl/https     Apache - SSL POODLE CVE-2014-3566 HIGH
+3306/tcp  open  mysql         MySQL 5.0 - root no password CRITICAL
+5900/tcp  open  vnc           VNC - No authentication required
+6200/tcp  open  backdoor      vsftpd 2.3.4 BACKDOOR
+8443/tcp  open  http          Tomcat 6.0 - admin:admin default creds
+smb-vuln-ms17-010: EternalBlue CVE-2017-0143 CRITICAL RCE`;
+}
+
+// ── GENERATE ──
+async function generate(){
+  const input=document.getElementById('scanInput').value.trim();
+  if(!input){showErr('Please paste your scan output first.');return;}
+  clearErr();
+  retestStatus={};overrides={};
+  const btn=document.getElementById('genBtn');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div> Generating...';
+  setStatus('Connecting to AI...',true);
+  document.getElementById('dlArea').style.display='none';
+  document.getElementById('previewWrap').style.display='none';
+
+  const model=localStorage.getItem('sr_model')||'openrouter/free';
+  const client=document.getElementById('clientName').value||'the client';
+  const atype=document.getElementById('assessType').value||'penetration test';
+  const scope=document.getElementById('scope').value||'target systems';
+
+  const prompt=`You are a senior penetration tester. Analyze this ${tool} scan for "${client}" (${atype}, scope: ${scope}). Return ONLY valid JSON, no markdown, no code fences.
+
+{
+  "riskScore": <1-10>,
+  "executiveSummary": {
+    "introduction": "2-3 sentences: engagement type, objective — zero technical jargon",
+    "engagementHighlights": "2-3 sentences: business-language overview of security posture",
+    "keyFindings": "2-3 sentences: most critical insights for decision-makers",
+    "businessImplications": "2-3 sentences: financial loss, regulatory fines, reputational risk if not addressed"
+  },
+  "narrative": {
+    "story": "3-4 sentences: the story of this assessment — patterns, what it reveals about security culture",
+    "theme": "1-2 sentences: central root cause theme tying all findings together",
+    "scopeAndMethodology": "2-3 sentences: what was tested and how"
+  },
+  "cisoSection": {
+    "overallStrengths": "2-3 sentences: what the org is doing well",
+    "overallWeaknesses": "2-3 sentences: main systemic security gaps",
+    "riskAssessment": "2-3 sentences: risk context and likelihood for CISO",
+    "strategicRecommendations": [
+      {"category":"e.g. Patch Management","priority":"Immediate|Short-term|Long-term","description":"Policy-level fix","findingCount":<number>}
+    ]
+  },
+  "findings": [
+    {
+      "id":"VULN-001","title":"Name","severity":"CRITICAL|HIGH|MEDIUM|LOW|INFO",
+      "cvss":<0-10>,"cve":"CVE-XXXX or null","affectedComponent":"service:port",
+      "description":"Technical description","evidence":"Exact scan evidence",
+      "remediation":"Specific fix steps",
+      "businessImpact":"Plain English business consequence",
+      "likelihood":<1-3>,"impact":<1-3>
+    }
+  ]
+}
+
+likelihood and impact are 1=Low 2=Medium 3=High — used for risk matrix.
+Sort findings by severity descending. Be thorough.
+
+Scan:
+${input}`;
+
+  try{
+    const controller=new AbortController();
+    const t=setTimeout(()=>controller.abort(),60000);
+    setStatus('AI analyzing... (up to 60s)',true);
+    const res=await fetch('/.netlify/functions/analyze',{
+      method:'POST',signal:controller.signal,
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:5000})
+    });
+    clearTimeout(t);
+    setStatus('Processing...',true);
+    if(!res.ok){const e=await res.json().catch(()=>({error:{message:res.statusText}}));throw new Error(e.error?.message||`HTTP ${res.status}`);}
+    const data=await res.json();
+    const raw=data.choices?.[0]?.message?.content||'';
+    reportData=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    setStatus(`Done — ${reportData.findings.length} findings · Risk ${reportData.riskScore}/10`,false,'ok');
+    renderPreview(reportData);
+    document.getElementById('previewWrap').style.display='block';
+    document.getElementById('dlArea').style.display='block';
+    // Show/hide optional tabs
+    document.getElementById('rtab-matrix').style.display=opt('matrix')?'':'none';
+    // History tab shown if 2+ reports for same client
+    const clients=JSON.parse(localStorage.getItem('sr_clients')||'[]');
+    const clientHistory=clients.filter(c=>c.name===document.getElementById('clientName').value);
+    document.getElementById('rtab-history').style.display=(opt('history')&&clientHistory.length>=1)?'':'none';
+    if(opt('matrix')) drawMatrix(reportData.findings);
+    if(opt('history')&&clientHistory.length>=1) drawHistory(clientHistory,document.getElementById('clientName').value);
+  }catch(e){
+    if(e.name==='AbortError')showErr('Timed out — try again.');
+    else showErr('Failed: '+e.message);
+    setStatus('Error',false,'err');
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.4 4H12l-3.4 2.5 1.3 4L6.5 9l-3.4 2.5 1.3-4L1 5h4.1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg> Re-Analyze';
+  }
+}
+
+// ── RENDER ──
+function renderPreview(d){
+  const ct={CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0,INFO:0};
+  d.findings.forEach(f=>{if(ct[f.severity]!==undefined)ct[f.severity]++;});
+  document.getElementById('findCount').textContent=`${d.findings.length} findings · Risk ${d.riskScore}/10`;
+
+  // Stats
+  document.getElementById('exec-stats').innerHTML=
+    `<div class="sc C"><div class="n">${ct.CRITICAL}</div><div class="l">Critical</div></div>
+     <div class="sc H"><div class="n">${ct.HIGH}</div><div class="l">High</div></div>
+     <div class="sc M"><div class="n">${ct.MEDIUM}</div><div class="l">Medium</div></div>
+     <div class="sc L"><div class="n">${ct.LOW}</div><div class="l">Low</div></div>
+     <div class="sc I"><div class="n">${ct.INFO}</div><div class="l">Info</div></div>`;
+
+  // Risk bar
+  const rc=d.riskScore>=8?'var(--red)':d.riskScore>=6?'var(--ora)':d.riskScore>=4?'var(--yel)':'var(--grn)';
+  document.getElementById('riskBar').style.cssText=`width:${d.riskScore*10}%;background:${rc}`;
+  document.getElementById('riskLabel').style.color=rc;
+  document.getElementById('riskLabel').textContent=`${d.riskScore}/10`;
+
+  // Executive
+  const es=d.executiveSummary||{};
+  document.getElementById('exec-intro').textContent=es.introduction||'';
+  document.getElementById('exec-highlights').textContent=es.engagementHighlights||'';
+  document.getElementById('exec-keyfindings').textContent=es.keyFindings||'';
+  document.getElementById('exec-bizimpact').textContent=es.businessImplications||'';
+
+  // CISO
+  const c=d.cisoSection||{};
+  document.getElementById('sw-grid').innerHTML=`
+    <div class="sw-card strength"><h4>✅ Overall Strengths</h4><p>${c.overallStrengths||'—'}</p></div>
+    <div class="sw-card weakness"><h4>⚠️ Overall Weaknesses</h4><p>${c.overallWeaknesses||'—'}</p></div>`;
+  const pc={Immediate:'immediate','Short-term':'shortterm','Long-term':'longterm'};
+  document.getElementById('strat-grid').innerHTML=(c.strategicRecommendations||[]).map(r=>`
+    <div class="strat-item">
+      <div class="strat-item-hdr">
+        <span class="strat-cat">${r.category}</span>
+        <span class="strat-count">${r.findingCount} finding${r.findingCount!==1?'s':''}</span>
+        <span class="strat-prio ${pc[r.priority]||'shortterm'}">${r.priority}</span>
+      </div>
+      <p>${r.description}</p>
+    </div>`).join('');
+  document.getElementById('ciso-risk').textContent=c.riskAssessment||'';
+
+  // Technical findings
+  const showComp=opt('compliance');
+  const showRetest=opt('retest');
+  const showOverride=opt('override');
+  document.getElementById('vlist').innerHTML=d.findings.map(f=>{
+    const comp=showComp?complianceTags(f.title):'';
+    const retest=showRetest?`
+      <div class="retest-row">
+        <span class="retest-label">Retest Status</span>
+        <select class="retest-select" id="rs-${f.id}" onchange="setRetest('${f.id}',this.value)">
+          <option value="open">Open</option>
+          <option value="progress">In Remediation</option>
+          <option value="resolved">Resolved ✓</option>
+          <option value="accepted">Risk Accepted</option>
+        </select>
+        <span class="retest-badge rs-open" id="rsb-${f.id}">OPEN</span>
+      </div>`:'';
+    const override=showOverride?`
+      <div class="override-row">
+        <span class="override-label">Override Severity</span>
+        <select class="override-select" id="ov-${f.id}" onchange="setOverride('${f.id}',this.value)">
+          <option value="">AI Default (${f.severity})</option>
+          <option value="CRITICAL">CRITICAL</option>
+          <option value="HIGH">HIGH</option>
+          <option value="MEDIUM">MEDIUM</option>
+          <option value="LOW">LOW</option>
+          <option value="INFO">INFO</option>
+        </select>
+      </div>
+      <textarea class="override-note" id="on-${f.id}" placeholder="Justification for override (e.g. server scheduled for decommission)..." onchange="setOverrideNote('${f.id}',this.value)"></textarea>`:'';
+    return `<div class="vc" id="vc-${f.id}">
+      <div class="vch" onclick="toggleF('${f.id}')">
+        <span class="sb ${f.severity}" id="sev-badge-${f.id}">${f.severity}</span>
+        <span class="vt">${f.title}</span>
+        <span class="vcvss">CVSS ${(+f.cvss||0).toFixed(1)}</span>
+        <span class="vtoggle">▼</span>
+      </div>
+      <div class="vcb">
+        <div class="vf"><div class="vfl">Component</div><div class="vfv">${f.affectedComponent||'—'}</div></div>
+        <div class="vf"><div class="vfl">Description</div><div class="vfv">${f.description||'—'}</div></div>
+        <div class="vf"><div class="vfl">Evidence</div><div class="vfv code">${f.evidence||'—'}</div></div>
+        <div class="vf"><div class="vfl">Business Impact</div><div class="vfv impact">${f.businessImpact||'—'}</div></div>
+        <div class="vf"><div class="vfl">Remediation</div><div class="vfv rem">${f.remediation||'—'}</div></div>
+        ${f.cve?`<div class="vf"><div class="vfl">CVE</div><div class="vfv" style="color:var(--blue)">${f.cve}</div></div>`:''}
+        ${comp?`<div class="vf"><div class="vfl">Compliance Mapping</div>${comp}</div>`:''}
+        ${retest}${override}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Narrative
+  const n=d.narrative||{};
+  document.getElementById('narrative-text').innerHTML=[n.story,n.theme].filter(Boolean).map(t=>`<p>${t}</p>`).join('');
+  document.getElementById('scope-text').textContent=n.scopeAndMethodology||'';
+}
+
+function toggleF(id){
+  const vc=document.getElementById('vc-'+id);
+  vc.classList.toggle('open');
+}
+
+// ── Retest ──
+function setRetest(id,val){
+  retestStatus[id]=val;
+  const badge=document.getElementById('rsb-'+id);
+  if(!badge)return;
+  const map={open:['rs-open','OPEN'],progress:['rs-progress','IN PROGRESS'],resolved:['rs-resolved','RESOLVED'],accepted:['rs-accepted','ACCEPTED']};
+  const[cls,txt]=map[val]||map.open;
+  badge.className='retest-badge '+cls;
+  badge.textContent=txt;
+  if(val==='resolved'){document.getElementById('vc-'+id).style.opacity='.55';}
+  else{document.getElementById('vc-'+id).style.opacity='1';}
+}
+
+// ── Severity Override ──
+function setOverride(id,val){
+  overrides[id]=overrides[id]||{};
+  overrides[id].severity=val;
+  if(val){
+    const badge=document.getElementById('sev-badge-'+id);
+    if(badge){badge.className='sb '+val;badge.textContent=val;}
+  }
+}
+function setOverrideNote(id,val){
+  overrides[id]=overrides[id]||{};
+  overrides[id].note=val;
+}
+
+// ── Risk Matrix ──
+function drawMatrix(findings){
+  const canvas=document.getElementById('matrixCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const pad={l:50,r:20,t:20,b:40};
+  const gW=W-pad.l-pad.r,gH=H-pad.t-pad.b;
+  const cellW=gW/3,cellH=gH/3;
+  const colors=[
+    ['#1a3a1a','#2a3a10','#3a2a08'],
+    ['#2a1a0a','#3a2a08','#3a1a08'],
+    ['#2a0a0a','#3a0a08','#3a0808'],
+  ];
+  for(let r=0;r<3;r++){
+    for(let c=0;c<3;c++){
+      ctx.fillStyle=colors[2-r][c];
+      ctx.fillRect(pad.l+c*cellW,pad.t+r*cellH,cellW-2,cellH-2);
+    }
+  }
+  // Axes labels
+  ctx.fillStyle='#2e3f66';ctx.font='10px Space Mono';ctx.textAlign='center';
+  ['Low','Med','High'].forEach((l,i)=>ctx.fillText(l,pad.l+i*cellW+cellW/2,H-pad.b+14));
+  ctx.fillText('Likelihood',pad.l+gW/2,H-2);
+  ctx.save();ctx.translate(14,pad.t+gH/2);ctx.rotate(-Math.PI/2);ctx.fillText('Impact',0,0);ctx.restore();
+  ['Low','Med','High'].forEach((l,i)=>{ctx.textAlign='right';ctx.fillText(l,pad.l-6,pad.t+(2-i)*cellH+cellH/2+4);});
+
+  // Plot findings
+  const SC={CRITICAL:'#ff3d5a',HIGH:'#ff8800',MEDIUM:'#ffcc00',LOW:'#00d68f',INFO:'#3d8eff'};
+  findings.forEach(f=>{
+    const lk=Math.min(Math.max((f.likelihood||2)-1,0),2);
+    const im=Math.min(Math.max((f.impact||2)-1,0),2);
+    const x=pad.l+lk*cellW+cellW/2;
+    const y=pad.t+(2-im)*cellH+cellH/2;
+    ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);
+    ctx.fillStyle=SC[f.severity]||'#fff';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1.5;ctx.stroke();
+  });
+}
+
+// ── History Chart ──
+function drawHistory(history,clientName){
+  document.getElementById('histClientName').textContent=clientName;
+  const allReports=[...history,{name:clientName,date:document.getElementById('rptDate').value,report:reportData}];
+  allReports.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const SC={CRITICAL:'var(--red)',HIGH:'var(--ora)',MEDIUM:'var(--yel)',LOW:'var(--grn)'};
+  const maxFinds=Math.max(...allReports.map(r=>r.report.findings.length),1);
+  let html='';
+  allReports.forEach(r=>{
+    const ct={CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0};
+    r.report.findings.forEach(f=>{if(ct[f.severity]!==undefined)ct[f.severity]++;});
+    const bars=Object.entries(ct).map(([k,v])=>`<div class="hist-bar" style="height:${(v/maxFinds*85)}px;background:${SC[k]}" title="${k}: ${v}"></div>`).join('');
+    html+=`<div class="hist-bar-group"><div class="hist-bars">${bars}</div><div class="hist-date">${r.date}</div></div>`;
+  });
+  document.getElementById('histChart').innerHTML=html;
+}
+
+// ── Clients ──
+function saveToClients(){
+  if(!reportData)return;
+  const name=document.getElementById('clientName').value||'Unknown Client';
+  const clients=JSON.parse(localStorage.getItem('sr_clients')||'[]');
+  clients.unshift({id:Date.now(),name,date:document.getElementById('rptDate').value,
+    assessType:document.getElementById('assessType').value,
+    assessor:document.getElementById('assessorName').value,
+    firm:document.getElementById('firmName').value,
+    scope:document.getElementById('scope').value,
+    report:reportData,retestStatus,overrides});
+  localStorage.setItem('sr_clients',JSON.stringify(clients));
+  setStatus(`Saved "${name}"`,false,'ok');
+  renderClients();
+  alert(`Report for "${name}" saved!`);
+}
+
+function renderClients(){
+  const clients=JSON.parse(localStorage.getItem('sr_clients')||'[]');
+  document.getElementById('clientCount').textContent=`${clients.length} REPORTS`;
+  const el=document.getElementById('clientList');
+  const SC2={CRITICAL:'#ff3d5a',HIGH:'#ff8800',MEDIUM:'#ffcc00',LOW:'#00d68f',INFO:'#3d8eff'};
+  if(!clients.length){el.innerHTML=`<div class="client-empty"><span>📁</span>No saved reports yet.<br>Generate and click "Save to Client Reports".</div>`;return;}
+  el.innerHTML='<div class="client-list">'+clients.map((c,i)=>{
+    const ct={CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0,INFO:0};
+    c.report.findings.forEach(f=>{if(ct[f.severity]!==undefined)ct[f.severity]++;});
+    const dots=Object.entries(ct).filter(([,v])=>v>0).map(([k])=>`<div class="cc-dot" style="background:${SC2[k]}" title="${k}"></div>`).join('');
+    return `<div class="cc"><div class="cc-info"><div class="cc-name">${c.name}</div><div class="cc-meta">${c.date} · ${c.report.findings.length} findings · Risk ${c.report.riskScore}/10</div></div>
+      <div class="cc-dots">${dots}</div>
+      <div class="cc-acts"><button class="cc-btn" onclick="loadClient(${i})">Load</button><button class="cc-btn" onclick="dlClient(${i})">PDF</button><button class="cc-btn del" onclick="delClient(${i})">✕</button></div></div>`;
+  }).join('')+'</div>';
+}
+
+function loadClient(i){
+  const c=JSON.parse(localStorage.getItem('sr_clients')||'[]')[i];
+  reportData=c.report;retestStatus=c.retestStatus||{};overrides=c.overrides||{};
+  document.getElementById('clientName').value=c.name;document.getElementById('assessType').value=c.assessType||'';
+  document.getElementById('rptDate').value=c.date;document.getElementById('assessorName').value=c.assessor||'';
+  document.getElementById('firmName').value=c.firm||'';document.getElementById('scope').value=c.scope||'';
+  renderPreview(reportData);
+  document.getElementById('previewWrap').style.display='block';document.getElementById('dlArea').style.display='block';
+  switchTab('analyze',document.querySelectorAll('.tab-btn')[0]);
+  setStatus(`Loaded "${c.name}"`,false,'ok');
+}
+function dlClient(i){
+  const c=JSON.parse(localStorage.getItem('sr_clients')||'[]')[i];
+  reportData=c.report;retestStatus=c.retestStatus||{};overrides=c.overrides||{};
+  document.getElementById('clientName').value=c.name;document.getElementById('assessType').value=c.assessType||'';
+  document.getElementById('rptDate').value=c.date;document.getElementById('assessorName').value=c.assessor||'';
+  document.getElementById('firmName').value=c.firm||'';downloadPDF();
+}
+function delClient(i){
+  if(!confirm('Delete this report?'))return;
+  const clients=JSON.parse(localStorage.getItem('sr_clients')||'[]');clients.splice(i,1);
+  localStorage.setItem('sr_clients',JSON.stringify(clients));renderClients();
+}
+
+// ── PDF ──
+async function downloadPDF(){
+  if(!reportData)return;
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'p',unit:'mm',format:'a4'});
+  const client=document.getElementById('clientName').value||'Confidential Client';
+  const atype=document.getElementById('assessType').value||'Penetration Test';
+  const rdate=document.getElementById('rptDate').value||new Date().toISOString().split('T')[0];
+  const assessor=document.getElementById('assessorName').value||'Security Assessor';
+  const firm=document.getElementById('firmName').value||'Security Firm';
+  const scopeTxt=document.getElementById('scope').value||'Defined scope';
+  const brand=JSON.parse(localStorage.getItem('sr_brand')||'{}');
+  const tagline=brand.tagline||'Professional Security Assessment';
+  const h2r=h=>{const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return[r,g,b];};
+  const AC=h2r(brand.color||'#00e5b4');
+  const W=210,M=18,CW=W-2*M;let y=0;
+  const SC={CRITICAL:[210,30,30],HIGH:[205,95,0],MEDIUM:[180,135,0],LOW:[0,170,115],INFO:[45,115,210]};
+  const RS_LABELS={open:'OPEN',progress:'IN PROGRESS',resolved:'RESOLVED ✓',accepted:'RISK ACCEPTED'};
+
+  function np(){doc.addPage();y=16;doc.setFillColor(5,8,16);doc.rect(0,0,210,297,'F');doc.setFillColor(11,16,28);doc.rect(0,0,210,7,'F');doc.setFontSize(6.5);doc.setTextColor(45,65,105);doc.text(`${client} — ${atype} — CONFIDENTIAL`,M,5);doc.text(rdate,W-M,5,{align:'right'});}
+  function ck(n){if(y+n>272)np();}
+  function secTitle(txt,sub=''){ck(16);doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(...AC);doc.text(txt.toUpperCase(),M,y);if(sub){doc.setFontSize(7);doc.setTextColor(50,70,110);doc.text(sub,W-M,y,{align:'right'});}y+=6;doc.setFillColor(...AC);doc.rect(M,y-2,24,0.7,'F');y+=5;}
+
+  // Cover
+  doc.setFillColor(5,8,16);doc.rect(0,0,210,297,'F');
+  doc.setFillColor(...AC);doc.rect(0,0,5,297,'F');
+  doc.setFillColor(9,14,24);doc.rect(5,0,205,297,'F');
+  if(logoDataUrl){try{doc.addImage(logoDataUrl,'PNG',M+5,20,36,14,'','FAST');}catch(e){}}
+  const tt=logoDataUrl?46:32;
+  doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(...AC);doc.text('PENETRATION TEST REPORT',M+5,tt);
+  const tl=doc.splitTextToSize(client,CW-8);
+  doc.setFontSize(25);doc.setTextColor(222,230,248);doc.text(tl,M+5,tt+11);
+  const at=tt+11+tl.length*10;
+  doc.setFontSize(11);doc.setTextColor(90,112,152);doc.setFont('helvetica','normal');doc.text(atype,M+5,at+3);
+  doc.setFontSize(8);doc.setTextColor(60,80,118);doc.text(`Scope: ${scopeTxt}`,M+5,at+10);
+  doc.setFillColor(...AC);doc.rect(M+5,at+15,34,0.7,'F');
+  const pb=at+24;
+  doc.setFontSize(7);doc.setTextColor(52,72,108);doc.setFont('helvetica','bold');doc.text('PREPARED BY',M+5,pb);
+  doc.setFontSize(11);doc.setTextColor(182,196,224);doc.setFont('helvetica','bold');doc.text(assessor,M+5,pb+7);
+  doc.setFontSize(8);doc.setTextColor(72,92,128);doc.setFont('helvetica','normal');doc.text(firm,M+5,pb+14);doc.text(tagline,M+5,pb+20);
+  doc.setFontSize(7);doc.setTextColor(52,72,108);doc.setFont('helvetica','bold');doc.text('DATE',M+5,pb+30);
+  doc.setFontSize(11);doc.setTextColor(182,196,224);doc.setFont('helvetica','bold');doc.text(rdate,M+5,pb+38);
+  const cnt={CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0,INFO:0};
+  reportData.findings.forEach(f=>{const eff=overrides[f.id]?.severity||f.severity;if(cnt[eff]!==undefined)cnt[eff]++;});
+  doc.setFontSize(7);doc.setTextColor(52,72,108);doc.setFont('helvetica','normal');doc.text('FINDINGS SUMMARY',M+5,172);
+  ['CRITICAL','HIGH','MEDIUM','LOW','INFO'].forEach((s,i)=>{
+    const[r,g,b]=SC[s];const bx=M+5+i*35;
+    doc.setFillColor(r,g,b);doc.roundedRect(bx,175,30,18,2,2,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(14);doc.setFont('helvetica','bold');doc.text(String(cnt[s]),bx+15,184,{align:'center'});
+    doc.setFontSize(5.5);doc.setFont('helvetica','normal');doc.text(s,bx+15,190,{align:'center'});
+  });
+  const rc=reportData.riskScore>=8?[205,25,25]:reportData.riskScore>=6?[200,92,0]:reportData.riskScore>=4?[175,132,0]:[0,165,110];
+  doc.setFillColor(...rc);doc.roundedRect(W-M-5-28,175,28,18,2,2,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(14);doc.setFont('helvetica','bold');doc.text(`${reportData.riskScore}/10`,W-M-5-14,184,{align:'center'});
+  doc.setFontSize(5.5);doc.setFont('helvetica','normal');doc.text('RISK SCORE',W-M-5-14,190,{align:'center'});
+  doc.setFontSize(6.5);doc.setTextColor(36,50,72);doc.text('CONFIDENTIAL — NOT FOR DISTRIBUTION',W/2,290,{align:'center'});
+
+  // Executive
+  np();doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(52,72,108);doc.text('FOR: CEO / BOARD OF DIRECTORS',M,y+3);y+=11;
+  secTitle('Executive Summary');
+  const es=reportData.executiveSummary||{};
+  const ws=(lbl,txt,ac)=>{if(!txt)return;ck(28);doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...ac);doc.text(lbl,M,y);y+=4;doc.setFont('helvetica','normal');doc.setTextColor(160,178,210);doc.setFontSize(9);const ls=doc.splitTextToSize(txt,CW);doc.text(ls,M,y);y+=ls.length*5.2+7;};
+  ws('INTRODUCTION',es.introduction,[...AC]);
+  ws('ENGAGEMENT HIGHLIGHTS',es.engagementHighlights,[95,138,215]);
+  ws('KEY FINDINGS',es.keyFindings,[205,65,75]);
+  ws('BUSINESS IMPLICATIONS',es.businessImplications,[195,128,0]);
+
+  // Narrative
+  np();doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(52,72,108);doc.text('FOR: ALL STAKEHOLDERS',M,y+3);y+=11;
+  secTitle('Assessment Narrative');
+  const nv=reportData.narrative||{};
+  if(nv.story){ck(20);doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(160,178,210);const sl=doc.splitTextToSize(nv.story,CW);doc.text(sl,M,y);y+=sl.length*5.2+6;}
+  if(nv.theme){ck(18);doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...AC);doc.text('CENTRAL THEME',M,y);y+=4;doc.setFont('helvetica','normal');doc.setTextColor(160,178,210);doc.setFontSize(9);const thl=doc.splitTextToSize(nv.theme,CW);doc.text(thl,M,y);y+=thl.length*5.2+7;}
+  if(nv.scopeAndMethodology){ck(16);doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(95,125,172);doc.text('SCOPE & METHODOLOGY',M,y);y+=4;doc.setFont('helvetica','normal');doc.setTextColor(138,158,195);doc.setFontSize(9);const ml=doc.splitTextToSize(nv.scopeAndMethodology,CW);doc.text(ml,M,y);y+=ml.length*5.2+10;}
+
+  // CISO
+  np();doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(52,72,108);doc.text('FOR: CISO / CIO / CTO',M,y+3);y+=11;
+  secTitle('Findings Summary & Strategic Recommendations');
+  const ci=reportData.cisoSection||{};
+  if(ci.overallStrengths){ck(22);doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(0,155,105);doc.text('OVERALL STRENGTHS',M,y);y+=4;doc.setFont('helvetica','normal');doc.setTextColor(128,172,152);doc.setFontSize(9);const sl=doc.splitTextToSize(ci.overallStrengths,CW);doc.text(sl,M,y);y+=sl.length*5+7;}
+  if(ci.overallWeaknesses){ck(22);doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(195,45,55);doc.text('OVERALL WEAKNESSES',M,y);y+=4;doc.setFont('helvetica','normal');doc.setTextColor(182,138,142);doc.setFontSize(9);const wl=doc.splitTextToSize(ci.overallWeaknesses,CW);doc.text(wl,M,y);y+=wl.length*5+8;}
+  secTitle('Strategic Recommendations','ROOT CAUSE CATEGORIES');
+  const prioC={Immediate:[195,38,48],'Short-term':[195,102,0],'Long-term':[0,152,105]};
+  (ci.strategicRecommendations||[]).forEach(r=>{
+    const[rr,rg,rb]=prioC[r.priority]||[95,118,175];
+    const dl=doc.splitTextToSize(r.description||'',CW-18);
+    const ch=20+dl.length*4.5;ck(ch+4);
+    doc.setFillColor(11,17,29);doc.roundedRect(M,y,CW,ch,2,2,'F');
+    doc.setFillColor(rr,rg,rb);doc.roundedRect(M,y,3,ch,1,1,'F');
+    doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(208,222,242);doc.text(r.category,M+7,y+7);
+    doc.setFontSize(6.5);doc.setTextColor(rr,rg,rb);doc.text(r.priority.toUpperCase(),W-M-2,y+7,{align:'right'});
+    doc.setFontSize(6.5);doc.setTextColor(105,128,175);doc.text(`${r.findingCount} finding${r.findingCount!==1?'s':''}`,M+7,y+13);
+    doc.setFont('helvetica','normal');doc.setTextColor(128,148,185);doc.setFontSize(8.5);doc.text(dl,M+7,y+18);
+    y+=ch+5;
+  });
+
+  // Technical findings
+  np();doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(52,72,108);doc.text('FOR: SECURITY TEAM / DEVELOPERS / OPERATIONS',M,y+3);y+=11;
+  secTitle('Technical Findings');
+  reportData.findings.forEach(f=>{
+    const effSev=overrides[f.id]?.severity||f.severity;
+    const [rr,rg,rb]=SC[effSev]||[100,100,100];
+    const rs=retestStatus[f.id]||'open';
+    const ovNote=overrides[f.id]?.note||'';
+    const comp=getCompliance(f.title);
+    // Use inner width leaving padding: 8px left indent + 4px right margin inside card
+    const innerW = CW - 20;
+    const dL=doc.splitTextToSize(f.description||'', innerW);
+    const eL=doc.splitTextToSize(f.evidence||'', innerW);
+    const rL=doc.splitTextToSize(f.remediation||'', innerW);
+    const bL=doc.splitTextToSize(f.businessImpact||'', innerW);
+    const ovL=ovNote?doc.splitTextToSize(`Override note: ${ovNote}`, innerW):[];
+
+    // Build compliance lines array so they wrap properly
+    const compParts=[];
+    if(comp){
+      if(comp.owasp) compParts.push(`OWASP ${comp.owasp}`);
+      if(comp.nist)  compParts.push(`NIST ${comp.nist}`);
+      if(comp.pci)   compParts.push(`PCI-DSS ${comp.pci}`);
+      if(comp.gdpr)  compParts.push(`GDPR ${comp.gdpr}`);
+    }
+    const compLine=compParts.join('  ·  ');
+    const compL=compLine?doc.splitTextToSize(compLine, innerW):[];
+
+    // Row heights: label(4) + text lines * 4.5 + gap(4) per field
+    const fieldH=(lines)=>4+lines.length*4.8+4;
+    const headerH=22; // severity badge row + cve row
+    const ch = headerH
+      + fieldH([f.affectedComponent||'—'])
+      + fieldH(dL)
+      + fieldH(eL)
+      + fieldH(bL)
+      + fieldH(rL)
+      + (compL.length ? fieldH(compL) : 0)
+      + (ovL.length   ? fieldH(ovL)   : 0)
+      + 6; // bottom padding
+
+    ck(ch+6);
+    doc.setFillColor(11,17,29);doc.roundedRect(M,y,CW,ch,3,3,'F');
+    doc.setFillColor(rr,rg,rb);doc.roundedRect(M,y,4,ch,2,2,'F');
+
+    // Header: severity + title
+    doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(rr,rg,rb);
+    doc.text(effSev,M+8,y+8);
+    const sw=doc.getTextWidth(effSev);
+    doc.setTextColor(210,222,245);doc.setFontSize(9);
+    // Title wraps if needed but cap to 1 line for header row
+    const titleMaxW=CW-sw-36;
+    const titleLine=doc.splitTextToSize(f.title,titleMaxW)[0];
+    doc.text(titleLine,M+12+sw,y+8);
+
+    // CVSS top right
+    if(f.cvss!=null){
+      doc.setTextColor(82,105,145);doc.setFontSize(7);
+      doc.text(`CVSS ${Number(f.cvss).toFixed(1)}`,W-M-3,y+8,{align:'right'});
+    }
+
+    // Retest badge below CVSS
+    const rsColors={open:[175,22,38],progress:[182,85,0],resolved:[0,145,95],accepted:[145,108,230]};
+    const[rsc1,rsc2,rsc3]=rsColors[rs]||rsColors.open;
+    doc.setFillColor(rsc1,rsc2,rsc3);
+    doc.roundedRect(W-M-30,y+12,28,7,1,1,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(5.5);doc.setFont('helvetica','bold');
+    doc.text(RS_LABELS[rs]||'OPEN',W-M-16,y+17,{align:'center'});
+
+    // CVE
+    if(f.cve){doc.setTextColor(42,108,200);doc.setFontSize(7);doc.setFont('helvetica','normal');doc.text(f.cve,M+8,y+15);}
+
+    // Fields
+    let ly=y+headerH;
+    const pf=(lbl,lines,col=[132,155,192])=>{
+      doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(52,78,118);
+      doc.text(lbl,M+8,ly);ly+=4;
+      doc.setFont('helvetica','normal');doc.setTextColor(...col);doc.setFontSize(8.5);
+      doc.text(lines,M+8,ly);
+      ly+=lines.length*4.8+4;
+    };
+    pf('COMPONENT',[f.affectedComponent||'—']);
+    pf('DESCRIPTION',dL);
+    pf('EVIDENCE',eL,[82,108,148]);
+    pf('BUSINESS IMPACT',bL,[182,150,55]);
+    pf('REMEDIATION',rL,[0,155,105]);
+    if(compL.length) pf('COMPLIANCE MAPPING',compL,[125,102,198]);
+    if(ovL.length)   pf('OVERRIDE NOTE',ovL,[92,115,152]);
+
+    y+=ch+6;
+  });
+
+  ck(16);doc.setFontSize(7);doc.setTextColor(36,50,72);doc.text('— END OF REPORT —',W/2,y+8,{align:'center'});
+  const pc=doc.getNumberOfPages();
+  for(let i=2;i<=pc;i++){doc.setPage(i);doc.setFontSize(6.5);doc.setTextColor(36,50,72);doc.text(`Page ${i} of ${pc}`,W/2,293,{align:'center'});}
+  doc.save(`${client.replace(/\s+/g,'-')}-SecureReport-v4-${rdate}.pdf`);
+  setStatus('PDF downloaded!',false,'ok');
+}
+</script>
+</body>
+</html>
