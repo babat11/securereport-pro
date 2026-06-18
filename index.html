@@ -770,7 +770,7 @@ ${input}`;
     const controller=new AbortController();
     const t=setTimeout(()=>controller.abort(),60000);
     setStatus('AI analyzing... (up to 60s)',true);
-    const res=await fetch('/.netlify/functions/analyze',{
+    const res=await fetch('/api/analyze',{
       method:'POST',signal:controller.signal,
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:5000})
