@@ -768,12 +768,12 @@ ${input}`;
 
   try{
     const controller=new AbortController();
-    const t=setTimeout(()=>controller.abort(),60000);
+    const t=setTimeout(()=>controller.abort(),9000);
     setStatus('AI analyzing... (up to 60s)',true);
     const res=await fetch('/api/analyze',{
       method:'POST',signal:controller.signal,
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:5000})
+      body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:8000})
     });
     clearTimeout(t);
     setStatus('Processing...',true);
