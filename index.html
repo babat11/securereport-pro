@@ -768,7 +768,7 @@ ${input}`;
 
   try{
     const controller=new AbortController();
-    const t=setTimeout(()=>controller.abort(),9000);
+    const t=setTimeout(()=>controller.abort(),90000);
     setStatus('AI analyzing... (up to 60s)',true);
     const res=await fetch('/api/analyze',{
       method:'POST',signal:controller.signal,
