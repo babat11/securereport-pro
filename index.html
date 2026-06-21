@@ -554,10 +554,10 @@ Supported: Nmap • Metasploit • Burp Suite • Nessus • OpenVAS • Nikto �
         <div style="margin-top:4px">
           <div class="cl"><em>MODEL</em> AI Model</div>
           <select id="modelSelect" style="width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-family:var(--mono);font-size:10px;padding:7px 9px;outline:none">
+            <option value="mistralai/mistral-small-3.1-24b-instruct:free" selected>mistral-small (Free · Recommended)</option>
+            <option value="meta-llama/llama-4-scout:free">llama-4-scout (Free · 128K context)</option>
             <option value="openrouter/free">openrouter/free (Auto · Free)</option>
-            <option value="mistralai/mistral-7b-instruct:free">mistral-7b (Free)</option>
             <option value="google/gemma-2-9b-it:free">gemma-2-9b (Free)</option>
-            <option value="microsoft/phi-3-mini-128k-instruct:free">phi-3-mini (Free)</option>
           </select>
       </div>
       <div class="cg">
@@ -720,7 +720,7 @@ async function generate(){
   document.getElementById('dlArea').style.display='none';
   document.getElementById('previewWrap').style.display='none';
 
-  const model=localStorage.getItem('sr_model')||'openrouter/free';
+  const model=localStorage.getItem('sr_model')||'mistralai/mistral-small-3.1-24b-instruct:free';
   const client=document.getElementById('clientName').value||'the client';
   const atype=document.getElementById('assessType').value||'penetration test';
   const scope=document.getElementById('scope').value||'target systems';
@@ -763,17 +763,19 @@ async function generate(){
 likelihood and impact are 1=Low 2=Medium 3=High — used for risk matrix.
 Sort findings by severity descending. Be thorough.
 
+CRITICAL: executiveSummary, narrative, and cisoSection are MANDATORY and must be fully written, regardless of how many findings exist. Never shorten or omit them to save space. Include ALL findings present in the scan — do not omit or cap the findings list. If you are at risk of running out of space, it is acceptable to write more concise (but still complete) finding descriptions — never sacrifice the executive/narrative sections to do so.
+
 Scan:
 ${input}`;
 
   try{
     const controller=new AbortController();
-    const t=setTimeout(()=>controller.abort(),90000);
+    const t=setTimeout(()=>controller.abort(),120000);
     setStatus('AI analyzing... (up to 60s)',true);
     const res=await fetch('/api/analyze',{
       method:'POST',signal:controller.signal,
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:8000})
+      body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:16000})
     });
     clearTimeout(t);
     setStatus('Processing...',true);
