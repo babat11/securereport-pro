@@ -554,9 +554,9 @@ Supported: Nmap • Metasploit • Burp Suite • Nessus • OpenVAS • Nikto �
         <div style="margin-top:4px">
           <div class="cl"><em>MODEL</em> AI Model</div>
           <select id="modelSelect" style="width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-family:var(--mono);font-size:10px;padding:7px 9px;outline:none">
-            <option value="mistralai/mistral-small-3.1-24b-instruct:free" selected>mistral-small (Free · Recommended)</option>
-            <option value="meta-llama/llama-4-scout:free">llama-4-scout (Free · 128K context)</option>
-            <option value="openrouter/free">openrouter/free (Auto · Free)</option>
+            <option value="openrouter/free" selected>openrouter/free (Auto · Most Reliable)</option>
+            <option value="meta-llama/llama-3.3-70b-instruct:free">llama-3.3-70b (Free)</option>
+            <option value="qwen/qwen3-coder:free">qwen3-coder (Free · Large context)</option>
             <option value="google/gemma-2-9b-it:free">gemma-2-9b (Free)</option>
           </select>
       </div>
@@ -720,7 +720,7 @@ async function generate(){
   document.getElementById('dlArea').style.display='none';
   document.getElementById('previewWrap').style.display='none';
 
-  const model=localStorage.getItem('sr_model')||'mistralai/mistral-small-3.1-24b-instruct:free';
+  const model=localStorage.getItem('sr_model')||'openrouter/free';
   const client=document.getElementById('clientName').value||'the client';
   const atype=document.getElementById('assessType').value||'penetration test';
   const scope=document.getElementById('scope').value||'target systems';
