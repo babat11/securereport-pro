@@ -549,16 +549,15 @@ Supported: Nmap • Metasploit • Burp Suite • Nessus • OpenVAS • Nikto �
       </div>
     </div>
     <div class="panel">
-      <div class="ph"><div class="ph-dot" style="background:var(--blue)"></div><h2>AI Model</h2></div>
+      <div class="ph"><div class="ph-dot" style="background:var(--blue)"></div><h2>Report Engine</h2></div>
       <div class="cg">
-        <div style="margin-top:4px">
-          <div class="cl"><em>MODEL</em> AI Model</div>
-          <select id="modelSelect" style="width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-family:var(--mono);font-size:10px;padding:7px 9px;outline:none">
-            <option value="openrouter/free" selected>openrouter/free (Auto · Most Reliable)</option>
-            <option value="meta-llama/llama-3.3-70b-instruct:free">llama-3.3-70b (Free)</option>
-            <option value="qwen/qwen3-coder:free">qwen3-coder (Free · Large context)</option>
-            <option value="google/gemma-2-9b-it:free">gemma-2-9b (Free)</option>
-          </select>
+        <div style="display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 13px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc);flex-shrink:0"></div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--t1);font-family:var(--sans)">Qwen3-Coder</div>
+            <div style="font-size:9px;color:var(--t3);font-family:var(--mono)">Active · Large context · High accuracy</div>
+          </div>
+        </div>
       </div>
       <div class="cg">
         <div class="cl"><em>SAAS</em> Pricing Tiers</div>
@@ -629,6 +628,39 @@ function complianceTags(title){
   return h;
 }
 
+// ── Security Utilities (OWASP A03 — XSS Prevention) ──
+// Escapes HTML special characters — use for ALL AI-generated content in innerHTML
+function esc(str){
+  if(str==null)return'';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;')
+    .replace(/\//g,'&#x2F;');
+}
+
+// Sanitizes a URL — only allow http/https (A03 — URL injection)
+function safeUrl(url){
+  if(!url)return'#';
+  try{
+    const u=new URL(url);
+    if(u.protocol==='http:'||u.protocol==='https:')return url;
+  }catch(e){}
+  return'#';
+}
+
+// Sanitizes severity values to known-good list only (A01 — input validation)
+const VALID_SEVERITIES=['CRITICAL','HIGH','MEDIUM','LOW','INFO'];
+function safeSeverity(s){return VALID_SEVERITIES.includes(s)?s:'INFO';}
+
+// Caps string length to prevent oversized payloads in UI (A01)
+function cap(str,max=2000){return str==null?'':String(str).slice(0,max);}
+
+// Validates scan input size (A01 — payload size limit)
+const MAX_SCAN_BYTES = 500_000; // 500KB max scan input
+
 // ── Init ──
 document.getElementById('rptDate').value=new Date().toISOString().split('T')[0];
 setStatus('Ready',false,'ok');
@@ -636,8 +668,6 @@ const sl=localStorage.getItem('sr_logo');
 if(sl){logoDataUrl=sl;showLogoPreview(sl);}
 const sb2=localStorage.getItem('sr_brand');
 if(sb2){try{const b=JSON.parse(sb2);if(b.color)document.getElementById('brandColor').value=b.color;if(b.tagline)document.getElementById('tagline').value=b.tagline;}catch(e){}}
-const sm=localStorage.getItem('sr_model');
-if(sm)document.getElementById('modelSelect').value=sm;
 const opts=JSON.parse(localStorage.getItem('sr_opts')||'{}');
 ['matrix','history','compliance','retest','override'].forEach(o=>{
   const el=document.getElementById('opt-'+o);
@@ -665,7 +695,7 @@ function setStatus(m,p,type=''){
   const d=document.getElementById('sdot');
   d.className='sdot'+(p?' pulse':'')+(type==='err'?' err':type==='ok'?' ok':'');
 }
-function showErr(m){document.getElementById('errArea').innerHTML=`<div class="err-box">${m}</div>`;}
+function showErr(m){document.getElementById('errArea').innerHTML=`<div class="err-box">${esc(String(m))}</div>`;}
 function clearErr(){document.getElementById('errArea').innerHTML='';}
 
 // ── Logo / Brand ──
@@ -674,8 +704,7 @@ function showLogoPreview(src){document.getElementById('logoPreview').src=src;doc
 function saveBranding(){
   const b={color:document.getElementById('brandColor').value,tagline:document.getElementById('tagline').value};
   localStorage.setItem('sr_brand',JSON.stringify(b));
-  localStorage.setItem('sr_model',document.getElementById('modelSelect').value);
-  alert('Branding & model saved!');
+  alert('Branding saved!');
 }
 
 // ── Save options ──
@@ -712,6 +741,8 @@ smb-vuln-ms17-010: EternalBlue CVE-2017-0143 CRITICAL RCE`;
 async function generate(){
   const input=document.getElementById('scanInput').value.trim();
   if(!input){showErr('Please paste your scan output first.');return;}
+  // A01 — Input size validation: prevent oversized payloads
+  if(new Blob([input]).size>MAX_SCAN_BYTES){showErr('Scan input too large (max 500KB). Please trim the output.');return;}
   clearErr();
   retestStatus={};overrides={};
   const btn=document.getElementById('genBtn');
@@ -720,7 +751,8 @@ async function generate(){
   document.getElementById('dlArea').style.display='none';
   document.getElementById('previewWrap').style.display='none';
 
-  const model=localStorage.getItem('sr_model')||'openrouter/free';
+  // Model locked server-side — Qwen3-Coder with silent fallback
+  const model='qwen/qwen3-coder:free';
   const client=document.getElementById('clientName').value||'the client';
   const atype=document.getElementById('assessType').value||'penetration test';
   const scope=document.getElementById('scope').value||'target systems';
@@ -835,17 +867,17 @@ function renderPreview(d){
   // CISO
   const c=d.cisoSection||{};
   document.getElementById('sw-grid').innerHTML=`
-    <div class="sw-card strength"><h4>✅ Overall Strengths</h4><p>${c.overallStrengths||'—'}</p></div>
-    <div class="sw-card weakness"><h4>⚠️ Overall Weaknesses</h4><p>${c.overallWeaknesses||'—'}</p></div>`;
+    <div class="sw-card strength"><h4>✅ Overall Strengths</h4><p>${esc(c.overallStrengths)||'—'}</p></div>
+    <div class="sw-card weakness"><h4>⚠️ Overall Weaknesses</h4><p>${esc(c.overallWeaknesses)||'—'}</p></div>`;
   const pc={Immediate:'immediate','Short-term':'shortterm','Long-term':'longterm'};
   document.getElementById('strat-grid').innerHTML=(c.strategicRecommendations||[]).map(r=>`
     <div class="strat-item">
       <div class="strat-item-hdr">
-        <span class="strat-cat">${r.category}</span>
-        <span class="strat-count">${r.findingCount} finding${r.findingCount!==1?'s':''}</span>
-        <span class="strat-prio ${pc[r.priority]||'shortterm'}">${r.priority}</span>
+        <span class="strat-cat">${esc(r.category)}</span>
+        <span class="strat-count">${esc(String(r.findingCount))} finding${r.findingCount!==1?'s':''}</span>
+        <span class="strat-prio ${pc[esc(r.priority)]||'shortterm'}">${esc(r.priority)}</span>
       </div>
-      <p>${r.description}</p>
+      <p>${esc(r.description)}</p>
     </div>`).join('');
   document.getElementById('ciso-risk').textContent=c.riskAssessment||'';
 
@@ -855,22 +887,25 @@ function renderPreview(d){
   const showOverride=opt('override');
   document.getElementById('vlist').innerHTML=d.findings.map(f=>{
     const comp=showComp?complianceTags(f.title):'';
+    // A01 — validate finding ID to alphanumeric only (prevents DOM clobbering)
+    const safeId=String(f.id||'').replace(/[^a-zA-Z0-9\-_]/g,'');
+    const safeSev=safeSeverity(f.severity);
     const retest=showRetest?`
       <div class="retest-row">
         <span class="retest-label">Retest Status</span>
-        <select class="retest-select" id="rs-${f.id}" onchange="setRetest('${f.id}',this.value)">
+        <select class="retest-select" id="rs-${safeId}" onchange="setRetest('${safeId}',this.value)">
           <option value="open">Open</option>
           <option value="progress">In Remediation</option>
           <option value="resolved">Resolved ✓</option>
           <option value="accepted">Risk Accepted</option>
         </select>
-        <span class="retest-badge rs-open" id="rsb-${f.id}">OPEN</span>
+        <span class="retest-badge rs-open" id="rsb-${safeId}">OPEN</span>
       </div>`:'';
     const override=showOverride?`
       <div class="override-row">
         <span class="override-label">Override Severity</span>
-        <select class="override-select" id="ov-${f.id}" onchange="setOverride('${f.id}',this.value)">
-          <option value="">AI Default (${f.severity})</option>
+        <select class="override-select" id="ov-${safeId}" onchange="setOverride('${safeId}',this.value)">
+          <option value="">AI Default (${esc(safeSev)})</option>
           <option value="CRITICAL">CRITICAL</option>
           <option value="HIGH">HIGH</option>
           <option value="MEDIUM">MEDIUM</option>
@@ -878,30 +913,30 @@ function renderPreview(d){
           <option value="INFO">INFO</option>
         </select>
       </div>
-      <textarea class="override-note" id="on-${f.id}" placeholder="Justification for override (e.g. server scheduled for decommission)..." onchange="setOverrideNote('${f.id}',this.value)"></textarea>`:'';
-    return `<div class="vc" id="vc-${f.id}">
-      <div class="vch" onclick="toggleF('${f.id}')">
-        <span class="sb ${f.severity}" id="sev-badge-${f.id}">${f.severity}</span>
-        <span class="vt">${f.title}</span>
+      <textarea class="override-note" id="on-${safeId}" placeholder="Justification for override (e.g. server scheduled for decommission)..." onchange="setOverrideNote('${safeId}',this.value)"></textarea>`:'';
+    return `<div class="vc" id="vc-${safeId}">
+      <div class="vch" onclick="toggleF('${safeId}')">
+        <span class="sb ${safeSev}" id="sev-badge-${safeId}">${esc(safeSev)}</span>
+        <span class="vt">${esc(cap(f.title,200))}</span>
         <span class="vcvss">CVSS ${(+f.cvss||0).toFixed(1)}</span>
         <span class="vtoggle">▼</span>
       </div>
       <div class="vcb">
-        <div class="vf"><div class="vfl">Component</div><div class="vfv">${f.affectedComponent||'—'}</div></div>
-        <div class="vf"><div class="vfl">Description</div><div class="vfv">${f.description||'—'}</div></div>
-        <div class="vf"><div class="vfl">Evidence</div><div class="vfv code">${f.evidence||'—'}</div></div>
-        <div class="vf"><div class="vfl">Business Impact</div><div class="vfv impact">${f.businessImpact||'—'}</div></div>
-        <div class="vf"><div class="vfl">Remediation</div><div class="vfv rem">${f.remediation||'—'}</div></div>
-        ${f.cve?`<div class="vf"><div class="vfl">CVE</div><div class="vfv" style="color:var(--blue)">${f.cve}</div></div>`:''}
+        <div class="vf"><div class="vfl">Component</div><div class="vfv">${esc(cap(f.affectedComponent))||'—'}</div></div>
+        <div class="vf"><div class="vfl">Description</div><div class="vfv">${esc(cap(f.description))||'—'}</div></div>
+        <div class="vf"><div class="vfl">Evidence</div><div class="vfv code">${esc(cap(f.evidence))||'—'}</div></div>
+        <div class="vf"><div class="vfl">Business Impact</div><div class="vfv impact">${esc(cap(f.businessImpact))||'—'}</div></div>
+        <div class="vf"><div class="vfl">Remediation</div><div class="vfv rem">${esc(cap(f.remediation))||'—'}</div></div>
+        ${f.cve?`<div class="vf"><div class="vfl">CVE</div><div class="vfv" style="color:var(--blue)">${esc(cap(f.cve,30))}</div></div>`:''}
         ${comp?`<div class="vf"><div class="vfl">Compliance Mapping</div>${comp}</div>`:''}
         ${retest}${override}
       </div>
     </div>`;
   }).join('');
 
-  // Narrative
+  // Narrative — A03: use esc() for AI-generated prose
   const n=d.narrative||{};
-  document.getElementById('narrative-text').innerHTML=[n.story,n.theme].filter(Boolean).map(t=>`<p>${t}</p>`).join('');
+  document.getElementById('narrative-text').innerHTML=[n.story,n.theme].filter(Boolean).map(t=>`<p>${esc(cap(t,3000))}</p>`).join('');
   document.getElementById('scope-text').textContent=n.scopeAndMethodology||'';
 }
 
@@ -1020,11 +1055,18 @@ function renderClients(){
   if(!clients.length){el.innerHTML=`<div class="client-empty"><span>📁</span>No saved reports yet.<br>Generate and click "Save to Client Reports".</div>`;return;}
   el.innerHTML='<div class="client-list">'+clients.map((c,i)=>{
     const ct={CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0,INFO:0};
-    c.report.findings.forEach(f=>{if(ct[f.severity]!==undefined)ct[f.severity]++;});
-    const dots=Object.entries(ct).filter(([,v])=>v>0).map(([k])=>`<div class="cc-dot" style="background:${SC2[k]}" title="${k}"></div>`).join('');
-    return `<div class="cc"><div class="cc-info"><div class="cc-name">${c.name}</div><div class="cc-meta">${c.date} · ${c.report.findings.length} findings · Risk ${c.report.riskScore}/10</div></div>
+    // A01 — validate findings before counting
+    (c.report.findings||[]).forEach(f=>{const s=safeSeverity(f.severity);if(ct[s]!==undefined)ct[s]++;});
+    const dots=Object.entries(ct).filter(([,v])=>v>0).map(([k])=>`<div class="cc-dot" style="background:${SC2[k]}" title="${esc(k)}"></div>`).join('');
+    // A03 — escape all localStorage-sourced data before rendering
+    const safeName=esc(cap(c.name||'Unknown',100));
+    const safeDate=esc(cap(c.date||'',20));
+    const safeCount=parseInt(c.report.findings?.length||0,10);
+    const safeRisk=parseFloat(c.report.riskScore||0).toFixed(1);
+    const safeIdx=parseInt(i,10);
+    return `<div class="cc"><div class="cc-info"><div class="cc-name">${safeName}</div><div class="cc-meta">${safeDate} · ${safeCount} findings · Risk ${safeRisk}/10</div></div>
       <div class="cc-dots">${dots}</div>
-      <div class="cc-acts"><button class="cc-btn" onclick="loadClient(${i})">Load</button><button class="cc-btn" onclick="dlClient(${i})">PDF</button><button class="cc-btn del" onclick="delClient(${i})">✕</button></div></div>`;
+      <div class="cc-acts"><button class="cc-btn" onclick="loadClient(${safeIdx})">Load</button><button class="cc-btn" onclick="dlClient(${safeIdx})">PDF</button><button class="cc-btn del" onclick="delClient(${safeIdx})">✕</button></div></div>`;
   }).join('')+'</div>';
 }
 
