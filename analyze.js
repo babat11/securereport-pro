@@ -42,22 +42,18 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: { message: 'Invalid request body.' } });
   }
 
-  // A01 — Model whitelist: only Qwen3-Coder accepted from client
-  // Silent fallback to openrouter/free handled server-side if Qwen3 unavailable
-  const ALLOWED_MODELS = [
-    'qwen/qwen3-coder:free',
-    'qwen/qwen3-coder',
-  ];
-  const requestedModel = body.model || 'qwen/qwen3-coder:free';
-  if (!ALLOWED_MODELS.includes(requestedModel)) {
-    return res.status(400).json({ error: { message: 'Model not permitted.' } });
-  }
+  // A01 — Accept any model string from client — actual model used is
+  // decided server-side only. Client sends a placeholder, server ignores it.
+  // Users never see or control which model runs — fully server-controlled.
 
-  // Silent fallback — try Qwen3-Coder first, fall back to openrouter/free
-  // Users never see which model ran — consistent experience guaranteed
+  // Silent model rotation — most capable free models tried in order.
+  // If one is unavailable/paid/rate-limited, next is tried automatically.
   const modelsToTry = [
-    'qwen/qwen3-coder:free',
-    'openrouter/free', // silent fallback — never exposed to UI
+    'meta-llama/llama-3.3-70b-instruct:free',   // Strong, large context, reliable
+    'mistralai/mistral-small-3.2-24b-instruct:free', // Fast, good instruction following
+    'google/gemma-3-9b-it:free',                 // Google, solid structured output
+    'meta-llama/llama-3.1-8b-instruct:free',     // Lightweight fallback
+    'openrouter/free',                            // Last resort auto-router
   ];
 
   // A01 — Cap max_tokens to prevent abuse
@@ -75,7 +71,7 @@ export default async function handler(req, res) {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://securereport-pro.vercel.app',
-          'X-Title': 'SecureReport Pro',
+          'X-Title': 'PenScribe',
         },
         body: JSON.stringify({ ...body, model }),
       });
