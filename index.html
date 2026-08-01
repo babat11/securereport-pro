@@ -751,8 +751,8 @@ async function generate(){
   document.getElementById('dlArea').style.display='none';
   document.getElementById('previewWrap').style.display='none';
 
-  // Model locked server-side — Qwen3-Coder with silent fallback
-  const model='qwen/qwen3-coder:free';
+  // Model selection is fully server-controlled — client sends neutral placeholder
+  const model='openrouter/free';
   const client=document.getElementById('clientName').value||'the client';
   const atype=document.getElementById('assessType').value||'penetration test';
   const scope=document.getElementById('scope').value||'target systems';
