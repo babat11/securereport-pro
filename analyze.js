@@ -46,14 +46,14 @@ export default async function handler(req, res) {
   // decided server-side only. Client sends a placeholder, server ignores it.
   // Users never see or control which model runs — fully server-controlled.
 
-  // Silent model rotation — most capable free models tried in order.
-  // If one is unavailable/paid/rate-limited, next is tried automatically.
+  // Silent model rotation — tried in order, user never sees which ran
   const modelsToTry = [
-    'meta-llama/llama-3.3-70b-instruct:free',   // Strong, large context, reliable
-    'mistralai/mistral-small-3.2-24b-instruct:free', // Fast, good instruction following
-    'google/gemma-3-9b-it:free',                 // Google, solid structured output
-    'meta-llama/llama-3.1-8b-instruct:free',     // Lightweight fallback
-    'openrouter/free',                            // Last resort auto-router
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'meta-llama/llama-4-scout:free',
+    'mistralai/mistral-small-3.2-24b-instruct:free',
+    'google/gemma-3-9b-it:free',
+    'meta-llama/llama-3.1-8b-instruct:free',
+    'openrouter/free',
   ];
 
   // A01 — Cap max_tokens to prevent abuse
@@ -78,11 +78,20 @@ export default async function handler(req, res) {
 
       const data = await response.json();
 
-      // If model unavailable or rate limited, try next
-      if (response.status === 429 || response.status === 503 ||
-          data?.error?.code === 'model_not_found' ||
-          data?.error?.message?.toLowerCase().includes('unavailable')) {
-        console.warn(`[SecureReport] Model ${model} unavailable, trying fallback...`);
+      // If model unavailable, paid, or rate limited — try next silently
+      const errMsg = (data?.error?.message || '').toLowerCase();
+      if (
+        response.status === 429 ||
+        response.status === 503 ||
+        data?.error?.code === 'model_not_found' ||
+        errMsg.includes('unavailable') ||
+        errMsg.includes('unavailable for free') ||
+        errMsg.includes('paid version') ||
+        errMsg.includes('not available for free') ||
+        errMsg.includes('rate limit') ||
+        errMsg.includes('quota')
+      ) {
+        console.warn(`[PenScribe] Model ${model} skipped: ${data?.error?.message}`);
         lastError = data?.error?.message;
         continue;
       }
