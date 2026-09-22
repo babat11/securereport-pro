@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Payment Successful — PenScribe</title>
+<meta name="robots" content="noindex"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--cyan:#00e5ff;--purple:#bf5af2;--navy:#0a0b14;--navy2:#0f1120;--border:#1e2240;--text:#e8eaf6;--muted:#6b7299;--mono:'JetBrains Mono','Fira Code',monospace}
+body{background:var(--navy);color:var(--text);font-family:var(--mono);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{background:var(--navy2);border:1px solid var(--border);border-radius:12px;overflow:hidden;width:100%;max-width:480px}
+.card-bar{background:#0d0e1c;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.dot{width:11px;height:11px;border-radius:50%}
+.card-body{padding:40px 32px;text-align:center}
+.icon{font-size:48px;margin-bottom:20px;display:block}
+.title{font-size:20px;font-weight:700;color:#fff;margin-bottom:8px}
+.sub{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:28px}
+.email-form{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.email-input{background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;transition:border-color .2s}
+.email-input:focus{border-color:rgba(0,229,255,.5)}
+.email-input::placeholder{color:var(--muted)}
+.btn{background:var(--cyan);color:var(--navy);font-family:var(--mono);font-size:13px;font-weight:700;padding:13px;border-radius:6px;border:none;cursor:pointer;transition:all .2s;width:100%}
+.btn:hover{background:#00b8cc;transform:translateY(-1px)}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.note{font-size:11px;color:var(--muted);line-height:1.6}
+.note a{color:var(--cyan)}
+.success-msg{display:none;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.3);border-radius:8px;padding:16px;margin-bottom:20px}
+.success-msg p{font-size:13px;color:var(--cyan);line-height:1.6}
+.err-msg{display:none;background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.3);border-radius:8px;padding:12px;margin-bottom:16px}
+.err-msg p{font-size:12px;color:#ff3b5c}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-bar">
+    <div class="dot" style="background:#ff3b5c"></div>
+    <div class="dot" style="background:#ffcc00"></div>
+    <div class="dot" style="background:#00e5ff"></div>
+    <span style="margin-left:8px;font-size:11px;color:var(--muted)">penscribe — payment confirmed</span>
+  </div>
+  <div class="card-body">
+    <span class="icon">✅</span>
+    <h1 class="title">Payment confirmed</h1>
+    <p class="sub">
+      Your PenScribe Premium subscription is now active.<br>
+      Enter your email below and we'll send you a magic link to access your account.
+    </p>
+
+    <div class="success-msg" id="successMsg">
+      <p>✓ Magic link sent! Check your inbox and click the link to access PenScribe Premium.<br>
+      Link expires in 15 minutes.</p>
+    </div>
+
+    <div class="err-msg" id="errMsg">
+      <p id="errText">Something went wrong. Please try again.</p>
+    </div>
+
+    <div class="email-form" id="emailForm">
+      <input
+        type="email"
+        id="emailInput"
+        class="email-input"
+        placeholder="Enter your payment email"
+        autocomplete="email"
+      />
+      <button class="btn" id="sendBtn" onclick="sendLink()">
+        Send Access Link →
+      </button>
+    </div>
+
+    <p class="note">
+      Already received your link? <a href="/login">Sign in here →</a><br>
+      Need help? <a href="mailto:hello@penscribe.app">hello@penscribe.app</a>
+    </p>
+  </div>
+</div>
+
+<script>
+// Pre-fill email from URL param if available
+const urlParams = new URLSearchParams(window.location.search);
+const emailParam = urlParams.get('email');
+if (emailParam) document.getElementById('emailInput').value = decodeURIComponent(emailParam);
+
+async function sendLink() {
+  const email = document.getElementById('emailInput').value.trim();
+  const btn = document.getElementById('sendBtn');
+  const successMsg = document.getElementById('successMsg');
+  const errMsg = document.getElementById('errMsg');
+  const errText = document.getElementById('errText');
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errText.textContent = 'Please enter a valid email address.';
+    errMsg.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  errMsg.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/send-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, trigger: 'payment_success' }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.sent) {
+      successMsg.style.display = 'block';
+      document.getElementById('emailForm').style.display = 'none';
+    } else {
+      errText.textContent = data.error || 'Failed to send. Please try again.';
+      errMsg.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Send Access Link →';
+    }
+  } catch (err) {
+    errText.textContent = 'Network error. Please try again.';
+    errMsg.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Send Access Link →';
+  }
+}
+
+// Allow enter key
+document.getElementById('emailInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendLink();
+});
+</script>
+</body>
+</html>
