@@ -1,18 +1,15 @@
 {
   "version": 2,
-  "functions": {
-    "api/analyze.js": {
-      "maxDuration": 60
-    }
-  },
   "routes": [
-    {
-      "src": "/api/analyze",
-      "dest": "/api/analyze.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/api/analyze", "dest": "/api/analyze.js" },
+    { "src": "/api/checkout", "dest": "/api/checkout.js" },
+    { "src": "/api/webhook", "dest": "/api/webhook.js" },
+    { "src": "/api/verify", "dest": "/api/verify.js" },
+    { "src": "/api/send-link", "dest": "/api/send-link.js" },
+    { "src": "/manifest.json", "dest": "/manifest.json" },
+    { "src": "/success", "dest": "/success.html" },
+    { "src": "/login", "dest": "/login.html" },
+    { "src": "/app", "dest": "/app.html" },
+    { "src": "/", "dest": "/index.html" }
   ]
 }
