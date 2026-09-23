@@ -97,9 +97,9 @@ export default async function handler(req, res) {
   const modelsToTry = [
     'meta-llama/llama-3.3-70b-instruct:free',
     'mistralai/mistral-small-3.2-24b-instruct:free',
-    'google/gemma-3-9b-it:free',
+    'google/gemma-2-9b-it:free',
     'meta-llama/llama-3.1-8b-instruct:free',
-    'openrouter/free',
+    'openrouter/auto',
   ];
 
   let lastError = null;
