@@ -93,13 +93,13 @@ export default async function handler(req, res) {
     });
   }
 
-  // ── Silent model fallback chain ──
+  // Silent model fallback chain — confirmed free models July 2026
   const modelsToTry = [
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'mistralai/mistral-small-3.2-24b-instruct:free',
-    'google/gemma-2-9b-it:free',
-    'meta-llama/llama-3.1-8b-instruct:free',
-    'openrouter/auto',
+    'deepseek/deepseek-chat-v3-0324:free',     // Best general, fast, 64K context
+    'meta-llama/llama-4-scout:free',            // Very fast, 10M context
+    'meta-llama/llama-3.3-70b-instruct:free',  // Strong instruction following
+    'google/gemma-3-27b-it:free',              // Google, low latency
+    'openrouter/free',                          // Last resort auto-router
   ];
 
   let lastError = null;
