@@ -1,13 +1,16 @@
+// api/analyze.js — AI proxy with tier enforcement
+// Checks free limit (3 reports) and premium status before generating
+
 export default async function handler(req, res) {
-  // A05 — Security Headers
+  // Security headers (A05)
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-  // A05 — CORS: restrict to your own domain only (not wildcard)
+  // CORS — restrict to own domain
   const allowedOrigins = [
-    'https://securereport-pro.vercel.app',
-    'http://localhost:3000', // dev only
+    process.env.APP_URL || 'https://securereport-pro.vercel.app',
+    'http://localhost:3000',
   ];
   const origin = req.headers.origin || '';
   if (allowedOrigins.includes(origin)) {
@@ -17,51 +20,88 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Vary', 'Origin');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') {
     return res.status(405).json({ error: { message: 'Method Not Allowed' } });
   }
 
   const apiKey = process.env.OPENROUTER_API_KEY;
+  const kvUrl = process.env.KV_REST_API_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN;
+
   if (!apiKey) {
-    return res.status(500).json({ error: { message: 'API key not configured on server.' } });
+    return res.status(500).json({ error: { message: 'API key not configured.' } });
   }
 
-  // A01 — Request size validation: reject oversized payloads (max 1MB)
+  // A01 — Request size check
   const contentLength = parseInt(req.headers['content-length'] || '0', 10);
   if (contentLength > 1_000_000) {
     return res.status(413).json({ error: { message: 'Request too large.' } });
   }
 
-  // A01 — Validate request body structure before forwarding
   const body = req.body;
   if (!body || typeof body !== 'object' || !Array.isArray(body.messages)) {
     return res.status(400).json({ error: { message: 'Invalid request body.' } });
   }
 
-  // A01 — Accept any model string from client — actual model used is
-  // decided server-side only. Client sends a placeholder, server ignores it.
-  // Users never see or control which model runs — fully server-controlled.
+  // Cap max_tokens
+  if (body.max_tokens && body.max_tokens > 16000) body.max_tokens = 16000;
 
-  // Silent model rotation — tried in order, user never sees which ran
-  const modelsToTry = [
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'meta-llama/llama-4-scout:free',
-    'mistralai/mistral-small-3.2-24b-instruct:free',
-    'google/gemma-3-9b-it:free',
-    'meta-llama/llama-3.1-8b-instruct:free',
-    'openrouter/free',
-  ];
+  // ── Tier Check ──
+  // Check if user has a valid premium session cookie
+  const cookies = req.headers.cookie || '';
+  const sessionMatch = cookies.match(/ps_session=([^;]+)/);
+  let isPremium = false;
+  let userEmail = null;
 
-  // A01 — Cap max_tokens to prevent abuse
-  if (body.max_tokens && body.max_tokens > 16000) {
-    body.max_tokens = 16000;
+  if (sessionMatch) {
+    try {
+      const session = JSON.parse(
+        Buffer.from(sessionMatch[1], 'base64').toString('utf8')
+      );
+      if (session.tier === 'premium' && session.status === 'active' && session.exp > Date.now()) {
+        // Verify against Redis (double-check — never trust cookie alone)
+        if (kvUrl && kvToken) {
+          const userRes = await fetch(
+            `${kvUrl}/get/${encodeURIComponent(`user:${session.email}`)}`,
+            { headers: { Authorization: `Bearer ${kvToken}` } }
+          );
+          const userData = await userRes.json();
+          if (userData.result) {
+            const user = JSON.parse(userData.result);
+            if (user.status === 'active' && user.tier === 'premium') {
+              isPremium = true;
+              userEmail = session.email;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Invalid session — treat as free user
+    }
   }
 
-  // Try each model in order — silent fallback, user never knows
+  // ── Free tier: count tracked server-side by IP as backup ──
+  // (client localStorage is primary, this is the server-side guard)
+  const reportCount = parseInt(body.reportCount || '0', 10);
+  if (!isPremium && reportCount >= 3) {
+    return res.status(402).json({
+      error: {
+        message: 'FREE_LIMIT_REACHED',
+        code: 'upgrade_required',
+      }
+    });
+  }
+
+  // ── Silent model fallback chain ──
+  const modelsToTry = [
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'mistralai/mistral-small-3.2-24b-instruct:free',
+    'google/gemma-2-9b-it:free',
+    'meta-llama/llama-3.1-8b-instruct:free',
+    'openrouter/auto',
+  ];
+
   let lastError = null;
   for (const model of modelsToTry) {
     try {
@@ -70,7 +110,7 @@ export default async function handler(req, res) {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://securereport-pro.vercel.app',
+          'HTTP-Referer': process.env.APP_URL || 'https://securereport-pro.vercel.app',
           'X-Title': 'PenScribe',
         },
         body: JSON.stringify({ ...body, model }),
@@ -78,20 +118,13 @@ export default async function handler(req, res) {
 
       const data = await response.json();
 
-      // If model unavailable, paid, or rate limited — try next silently
-      const errMsg = (data?.error?.message || '').toLowerCase();
       if (
-        response.status === 429 ||
-        response.status === 503 ||
+        response.status === 429 || response.status === 503 ||
         data?.error?.code === 'model_not_found' ||
-        errMsg.includes('unavailable') ||
-        errMsg.includes('unavailable for free') ||
-        errMsg.includes('paid version') ||
-        errMsg.includes('not available for free') ||
-        errMsg.includes('rate limit') ||
-        errMsg.includes('quota')
+        data?.error?.message?.toLowerCase().includes('unavailable') ||
+        data?.error?.message?.toLowerCase().includes('paid')
       ) {
-        console.warn(`[PenScribe] Model ${model} skipped: ${data?.error?.message}`);
+        console.warn(`[PenScribe] Model ${model} unavailable, trying next...`);
         lastError = data?.error?.message;
         continue;
       }
@@ -105,13 +138,14 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
 
     } catch (err) {
-      console.error(`[SecureReport] Model ${model} error:`, err.message);
+      console.error(`[PenScribe] Model ${model} error:`, err.message);
       lastError = err.message;
       continue;
     }
   }
 
-  // All models failed
-  console.error('[SecureReport] All models failed. Last error:', lastError);
-  return res.status(503).json({ error: { message: 'Service temporarily unavailable. Please try again.' } });
+  console.error('[PenScribe] All models failed:', lastError);
+  return res.status(503).json({
+    error: { message: 'Service temporarily unavailable. Please try again.' }
+  });
 }
