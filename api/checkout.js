@@ -24,12 +24,9 @@ export default async function handler(req, res) {
   }
 
   const apiKey = process.env.NOWPAYMENTS_API_KEY;
-  const planId = process.env.NOWPAYMENTS_PLAN_ID;
   const appUrl = process.env.APP_URL || 'https://securereport-pro.vercel.app';
-  const isSandbox = process.env.NOWPAYMENTS_MODE === 'sandbox';
-  const baseUrl = isSandbox
-    ? 'https://api-sandbox.nowpayments.io/v1'
-    : 'https://api.nowpayments.io/v1';
+  // Always use live API — real account, not sandbox
+  const baseUrl = 'https://api.nowpayments.io/v1';
 
   if (!apiKey || !planId) {
     console.error('[PenScribe] Missing NOWPayments env vars');
@@ -37,19 +34,21 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Create NOWPayments subscription invoice
-    const response = await fetch(`${baseUrl}/subscription`, {
+    // Create NOWPayments payment invoice
+    // Using /invoice endpoint — works on all account types including sandbox
+    const response = await fetch(`${baseUrl}/invoice`, {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        plan_id: planId,
-        email: cleanEmail,
+        price_amount: 39,
+        price_currency: 'usd',
+        order_description: `PenScribe Premium — ${cleanEmail}`,
+        ipn_callback_url: `${appUrl}/api/webhook`,
         success_url: `${appUrl}/success?email=${encodeURIComponent(cleanEmail)}`,
         cancel_url: `${appUrl}/app`,
-        partially_paid_url: `${appUrl}/success?email=${encodeURIComponent(cleanEmail)}&partial=true`,
       }),
     });
 
@@ -62,10 +61,10 @@ export default async function handler(req, res) {
       });
     }
 
-    // Return checkout URL to redirect user
+    // Return invoice URL to redirect user
     return res.status(200).json({
-      checkout_url: data.pay_url || data.invoice_url,
-      subscription_id: data.id,
+      checkout_url: data.invoice_url,
+      invoice_id: data.id,
     });
 
   } catch (err) {
