@@ -293,6 +293,71 @@ input[type=text]:focus,input[type=date]:focus{border-color:var(--acc)}
 </style>
 </head>
 <body>
+
+<!-- ── UPGRADE MODAL ── -->
+<div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px">
+  <div style="background:#0f1120;border:1px solid rgba(0,229,255,.3);border-radius:14px;max-width:480px;width:100%;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.8),0 0 0 1px rgba(0,229,255,.05)">
+    <!-- Bar -->
+    <div style="background:#0d0e1c;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1e2240">
+      <div style="width:11px;height:11px;border-radius:50%;background:#ff3b5c"></div>
+      <div style="width:11px;height:11px;border-radius:50%;background:#ffcc00"></div>
+      <div style="width:11px;height:11px;border-radius:50%;background:#00e5ff"></div>
+      <span style="margin-left:8px;font-family:monospace;font-size:11px;color:#6b7299">penscribe — upgrade required</span>
+    </div>
+    <!-- Body -->
+    <div style="padding:32px;text-align:center">
+      <div style="font-size:36px;margin-bottom:16px">🔒</div>
+      <h2 style="font-family:monospace;font-size:18px;font-weight:700;color:#fff;margin-bottom:8px">
+        You've used your 3 free reports
+      </h2>
+      <p style="font-family:monospace;font-size:13px;color:#6b7299;margin-bottom:24px;line-height:1.6">
+        Upgrade to PenScribe Premium for unlimited reports,<br>
+        compliance mapping, risk matrix, and white-label branding.
+      </p>
+      <!-- Price -->
+      <div style="background:#0a0b14;border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:20px;margin-bottom:24px">
+        <div style="font-family:monospace;font-size:32px;font-weight:700;color:#00e5ff">$39<span style="font-size:14px;color:#6b7299">/month</span></div>
+        <div style="font-family:monospace;font-size:11px;color:#6b7299;margin-top:4px">Unlimited reports · All features · Cancel anytime</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <span style="font-family:monospace;font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid #1e2240;color:#6b7299">₮ USDT</span>
+          <span style="font-family:monospace;font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid #1e2240;color:#6b7299">₿ BTC</span>
+          <span style="font-family:monospace;font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid #1e2240;color:#6b7299">Ξ ETH</span>
+          <span style="font-family:monospace;font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid #1e2240;color:#6b7299">+ 300 coins</span>
+        </div>
+      </div>
+      <!-- Email input -->
+      <div id="upgradeForm">
+        <div style="font-family:monospace;font-size:11px;color:#6b7299;margin-bottom:8px;text-align:left">Enter your email to continue:</div>
+        <input type="email" id="upgradeEmail" placeholder="you@example.com"
+          style="width:100%;background:#0a0b14;border:1px solid #1e2240;border-radius:6px;padding:12px 14px;font-family:monospace;font-size:13px;color:#e8eaf6;outline:none;margin-bottom:10px;transition:border-color .2s"
+          onfocus="this.style.borderColor='rgba(0,229,255,.5)'"
+          onblur="this.style.borderColor='#1e2240'"/>
+        <button onclick="startCheckout()"
+          style="width:100%;background:#00e5ff;color:#0a0b14;font-family:monospace;font-size:14px;font-weight:700;padding:14px;border-radius:6px;border:none;cursor:pointer;transition:all .2s;margin-bottom:10px"
+          onmouseover="this.style.background='#00b8cc'"
+          onmouseout="this.style.background='#00e5ff'"
+          id="checkoutBtn">
+          Upgrade with Crypto — $39/mo →
+        </button>
+        <div id="upgradeErr" style="font-family:monospace;font-size:11px;color:#ff3b5c;display:none;margin-bottom:8px"></div>
+        <button onclick="closeUpgrade()"
+          style="width:100%;background:transparent;color:#6b7299;font-family:monospace;font-size:12px;padding:10px;border-radius:6px;border:1px solid #1e2240;cursor:pointer">
+          Maybe later
+        </button>
+      </div>
+      <div id="upgradeLoading" style="display:none;font-family:monospace;font-size:13px;color:#6b7299">
+        <div style="margin-bottom:8px">⟳ Creating your payment...</div>
+        <div style="font-size:11px">Redirecting to secure checkout</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FREE TIER COUNTER ── -->
+<div id="freeBanner" style="display:none;background:rgba(0,229,255,.05);border-bottom:1px solid rgba(0,229,255,.15);padding:8px 16px;text-align:center;font-family:monospace;font-size:11px;color:#6b7299">
+  <span id="freeCounter"></span>
+  <a href="#" onclick="showUpgrade();return false" style="color:#00e5ff;margin-left:8px;text-decoration:none">Upgrade to Premium →</a>
+</div>
 <div class="app">
 
 <header>
@@ -586,6 +651,107 @@ Supported: Nmap • Metasploit • Burp Suite • Nessus • OpenVAS • Nikto �
 // ── State ──
 let tool='nmap', reportData=null, logoDataUrl=null, retestStatus={}, overrides={};
 
+// ── Free Tier & Premium Session ──
+const FREE_LIMIT = 3;
+const PS_COUNT_KEY = 'ps_reports_used';
+const PS_PREMIUM_KEY = 'ps_premium';
+
+function getReportCount() {
+  return parseInt(localStorage.getItem(PS_COUNT_KEY) || '0', 10);
+}
+
+function incrementReportCount() {
+  const count = getReportCount() + 1;
+  localStorage.setItem(PS_COUNT_KEY, count);
+  updateFreeBanner();
+  return count;
+}
+
+function isPremiumLocal() {
+  return localStorage.getItem(PS_PREMIUM_KEY) === 'true';
+}
+
+function updateFreeBanner() {
+  const banner = document.getElementById('freeBanner');
+  const counter = document.getElementById('freeCounter');
+  if (!banner || !counter) return;
+  if (isPremiumLocal()) { banner.style.display = 'none'; return; }
+  const used = getReportCount();
+  const remaining = Math.max(0, FREE_LIMIT - used);
+  if (used === 0) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  counter.textContent = remaining > 0
+    ? `Free tier: ${used} of ${FREE_LIMIT} reports used — ${remaining} remaining`
+    : `Free reports used up — upgrade for unlimited access`;
+}
+
+function showUpgrade() {
+  document.getElementById('upgradeModal').style.display = 'flex';
+}
+
+function closeUpgrade() {
+  document.getElementById('upgradeModal').style.display = 'none';
+}
+
+async function startCheckout() {
+  const email = document.getElementById('upgradeEmail').value.trim();
+  const errDiv = document.getElementById('upgradeErr');
+  const btn = document.getElementById('checkoutBtn');
+  const loading = document.getElementById('upgradeLoading');
+  const form = document.getElementById('upgradeForm');
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errDiv.textContent = 'Please enter a valid email address.';
+    errDiv.style.display = 'block';
+    return;
+  }
+
+  errDiv.style.display = 'none';
+  form.style.display = 'none';
+  loading.style.display = 'block';
+
+  try {
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+
+    if (res.ok && data.checkout_url) {
+      // Save email for post-payment
+      localStorage.setItem('ps_checkout_email', email);
+      window.location.href = data.checkout_url;
+    } else {
+      form.style.display = 'block';
+      loading.style.display = 'none';
+      errDiv.textContent = data.error || 'Checkout failed. Please try again.';
+      errDiv.style.display = 'block';
+    }
+  } catch (err) {
+    form.style.display = 'block';
+    loading.style.display = 'none';
+    errDiv.textContent = 'Network error. Please try again.';
+    errDiv.style.display = 'block';
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('upgradeModal').addEventListener('click', function(e) {
+  if (e.target === this) closeUpgrade();
+});
+
+// Check if returning from successful payment verification
+if (new URLSearchParams(window.location.search).get('verified') === 'true') {
+  localStorage.setItem(PS_PREMIUM_KEY, 'true');
+  localStorage.setItem(PS_COUNT_KEY, '0');
+  // Clean URL
+  window.history.replaceState({}, '', '/app');
+}
+
+// Initialize banner on load
+updateFreeBanner();
+
 const COMPLIANCE_MAP = {
   'SQL Injection':       {owasp:'A03:2021',nist:'SI-10',pci:'6.3.1',gdpr:'Art.32'},
   'XSS':                {owasp:'A03:2021',nist:'SI-10',pci:'6.3.1'},
@@ -743,6 +909,16 @@ async function generate(){
   if(!input){showErr('Please paste your scan output first.');return;}
   // A01 — Input size validation: prevent oversized payloads
   if(new Blob([input]).size>MAX_SCAN_BYTES){showErr('Scan input too large (max 500KB). Please trim the output.');return;}
+
+  // ── Free tier check ──
+  if (!isPremiumLocal()) {
+    const count = getReportCount();
+    if (count >= FREE_LIMIT) {
+      showUpgrade();
+      return;
+    }
+  }
+
   clearErr();
   retestStatus={};overrides={};
   const btn=document.getElementById('genBtn');
@@ -807,14 +983,32 @@ ${input}`;
     const res=await fetch('/api/analyze',{
       method:'POST',signal:controller.signal,
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:16000})
+      body:JSON.stringify({
+        model,
+        messages:[{role:'user',content:prompt}],
+        temperature:0.2,
+        max_tokens:16000,
+        reportCount: isPremiumLocal() ? 0 : getReportCount()
+      })
     });
     clearTimeout(t);
     setStatus('Processing...',true);
-    if(!res.ok){const e=await res.json().catch(()=>({error:{message:res.statusText}}));throw new Error(e.error?.message||`HTTP ${res.status}`);}
+    if(!res.ok){
+      const e=await res.json().catch(()=>({error:{message:res.statusText}}));
+      // Handle free limit reached from server
+      if(res.status===402||e?.error?.message==='FREE_LIMIT_REACHED'){
+        showUpgrade();
+        btn.disabled=false;
+        btn.innerHTML='<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.4 4H12l-3.4 2.5 1.3 4L6.5 9l-3.4 2.5 1.3-4L1 5h4.1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg> Re-Analyze';
+        return;
+      }
+      throw new Error(e.error?.message||`HTTP ${res.status}`);
+    }
     const data=await res.json();
     const raw=data.choices?.[0]?.message?.content||'';
     reportData=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    // Increment free tier count (only if not premium)
+    if (!isPremiumLocal()) incrementReportCount();
     setStatus(`Done — ${reportData.findings.length} findings · Risk ${reportData.riskScore}/10`,false,'ok');
     renderPreview(reportData);
     document.getElementById('previewWrap').style.display='block';
@@ -1291,3 +1485,4 @@ async function downloadPDF(){
 </script>
 </body>
 </html>
+isPremiumLocalisPremiumLocal
