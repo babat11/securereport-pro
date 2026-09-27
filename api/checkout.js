@@ -1,8 +1,7 @@
 // api/checkout.js — NOWPayments crypto checkout
-// Creates a payment invoice for PenScribe Premium ($39/month)
+const https = require('https');
 
-export default async function handler(req, res) {
-  // Security headers
+module.exports = async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
 
@@ -10,13 +9,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // A01 — Validate email input
   const { email } = req.body || {};
   if (!email || typeof email !== 'string') {
     return res.status(400).json({ error: 'Valid email required' });
   }
 
-  // Sanitize email
   const cleanEmail = email.toLowerCase().trim().slice(0, 254);
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(cleanEmail)) {
@@ -24,51 +21,61 @@ export default async function handler(req, res) {
   }
 
   const apiKey = process.env.NOWPAYMENTS_API_KEY;
-  const appUrl = process.env.APP_URL || 'https://securereport-pro.vercel.app';
-  // Always use live API — real account, not sandbox
-  const baseUrl = 'https://api.nowpayments.io/v1';
+  const appUrl = (process.env.APP_URL || 'https://securereport-pro.vercel.app').replace(/\/$/, '');
 
-  if (!apiKey || !planId) {
-    console.error('[PenScribe] Missing NOWPayments env vars');
+  if (!apiKey) {
+    console.error('[PenScribe] Missing NOWPAYMENTS_API_KEY');
     return res.status(500).json({ error: 'Payment service not configured' });
   }
 
-  try {
-    // Create NOWPayments payment invoice
-    // Using /invoice endpoint — works on all account types including sandbox
-    const response = await fetch(`${baseUrl}/invoice`, {
+  const payload = JSON.stringify({
+    price_amount: 39,
+    price_currency: 'usd',
+    order_description: `PenScribe Premium — ${cleanEmail}`,
+    ipn_callback_url: `${appUrl}/api/webhook`,
+    success_url: `${appUrl}/success?email=${encodeURIComponent(cleanEmail)}`,
+    cancel_url: `${appUrl}/app`,
+  });
+
+  // Use native https module — no dependency on fetch or node-fetch
+  const result = await new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.nowpayments.io',
+      path: '/v1/invoice',
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
         'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
       },
-      body: JSON.stringify({
-        price_amount: 39,
-        price_currency: 'usd',
-        order_description: `PenScribe Premium — ${cleanEmail}`,
-        ipn_callback_url: `${appUrl}/api/webhook`,
-        success_url: `${appUrl}/success?email=${encodeURIComponent(cleanEmail)}`,
-        cancel_url: `${appUrl}/app`,
-      }),
-    });
+    };
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('[PenScribe] NOWPayments error:', data);
-      return res.status(response.status).json({
-        error: data?.message || 'Payment service error'
+    const reqHttp = https.request(options, (resHttp) => {
+      let data = '';
+      resHttp.on('data', chunk => data += chunk);
+      resHttp.on('end', () => {
+        try {
+          resolve({ status: resHttp.statusCode, body: JSON.parse(data) });
+        } catch (e) {
+          resolve({ status: resHttp.statusCode, body: { message: data } });
+        }
       });
-    }
-
-    // Return invoice URL to redirect user
-    return res.status(200).json({
-      checkout_url: data.invoice_url,
-      invoice_id: data.id,
     });
 
-  } catch (err) {
-    console.error('[PenScribe] Checkout error:', err.message);
-    return res.status(500).json({ error: 'Internal server error' });
+    reqHttp.on('error', reject);
+    reqHttp.write(payload);
+    reqHttp.end();
+  });
+
+  if (result.status !== 200 && result.status !== 201) {
+    console.error('[PenScribe] NOWPayments error:', result.body);
+    return res.status(result.status).json({
+      error: result.body?.message || 'Payment service error'
+    });
   }
-}
+
+  return res.status(200).json({
+    checkout_url: result.body.invoice_url,
+    invoice_id: result.body.id,
+  });
+};
